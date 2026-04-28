@@ -1,0 +1,11 @@
+__pycache__
+*_cache
+.vscode
+dist/
+venv/
+*.egg-info
+*.log
+*.lock
+*.bat
+Makefile
+.telnet

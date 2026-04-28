@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ldf.attributes.addresses &#8212; Lawo Device Factory  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=12dfc556" />
+    <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for ldf.attributes.addresses</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Iterable</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">datamodel.addresses</span><span class="w"> </span><span class="kn">import</span> <span class="n">addresses_home</span><span class="p">,</span> <span class="n">addresses_pb2</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datamodel.sords</span><span class="w"> </span><span class="kn">import</span> <span class="n">sords_pb2</span>
+
+<span class="n">CONNECTION_TIMEOUT</span> <span class="o">=</span> <span class="mi">6</span>
+
+
+<div class="viewcode-block" id="AddressConnectError">
+<a class="viewcode-back" href="../../../ldf.attributes.html#ldf.attributes.addresses.AddressConnectError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">AddressConnectError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Raised when the an error is returned from the connect request&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">msg</span> <span class="o">=</span> <span class="n">msg</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">msg</span></div>
+
+
+
+<div class="viewcode-block" id="create_connection">
+<a class="viewcode-back" href="../../../ldf.attributes.html#ldf.attributes.addresses.create_connection">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">create_connection</span><span class="p">(</span><span class="n">src_flow</span><span class="p">:</span> <span class="n">sords_pb2</span><span class="o">.</span><span class="n">Gate</span><span class="p">,</span> <span class="n">dst_flow</span><span class="p">:</span> <span class="n">sords_pb2</span><span class="o">.</span><span class="n">Gate</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">addresses_pb2</span><span class="o">.</span><span class="n">Connection</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates an Addresses data structure containing a single source and destination gate object</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        src_flow (sords_pb2.Gate): A gate object describing the route source sord/flow</span>
+<span class="sd">        dst_flow (sords_pb2.Gate): A gate object describing the route destination sord/flow</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        addresses_pb2.Connection: A Connection object containing the source and destination flow</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">addresses_pb2</span><span class="o">.</span><span class="n">Connection</span><span class="p">()</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">Src</span><span class="o">.</span><span class="n">MergeFrom</span><span class="p">(</span><span class="n">src_flow</span><span class="p">)</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">Dst</span><span class="o">.</span><span class="n">MergeFrom</span><span class="p">(</span><span class="n">dst_flow</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">conn</span></div>
+
+
+
+<div class="viewcode-block" id="sort_addresses">
+<a class="viewcode-back" href="../../../ldf.attributes.html#ldf.attributes.addresses.sort_addresses">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">sort_addresses</span><span class="p">(</span>
+        <span class="n">addresses</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">addresses_pb2</span><span class="o">.</span><span class="n">Address</span><span class="p">],</span>
+        <span class="nb">type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">direction</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">addresses_pb2</span><span class="o">.</span><span class="n">Address</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Apply filtering and sorting to a sequence of datamodel Addresses</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        addresses (Iterable[addresses_pb2.Address]): Sequence of Addresses</span>
+<span class="sd">        type (str, optional): Filter by address type. Defaults to None.</span>
+<span class="sd">        direction (str, optional): Filter by address direction. Defaults to None.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list[addresses_pb2.Address]: _description_</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">addrs</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">addresses</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">:</span>
+        <span class="n">essence</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">sords_pb2</span><span class="o">.</span><span class="n">Essence</span><span class="p">,</span> <span class="nb">type</span><span class="o">.</span><span class="n">upper</span><span class="p">())</span>
+        <span class="n">addrs</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">addrs</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">Essence</span> <span class="o">==</span> <span class="n">essence</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;tx&#39;</span><span class="p">:</span>
+        <span class="n">addrs</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">addrs</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">x</span><span class="o">.</span><span class="n">IsDest</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;rx&#39;</span><span class="p">:</span>
+        <span class="n">addrs</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">addrs</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">IsDest</span><span class="p">]</span>
+    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">addrs</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">ID</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="LawoHomeNativeAddresses">
+<a class="viewcode-back" href="../../../ldf.attributes.html#ldf.attributes.addresses.LawoHomeNativeAddresses">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">LawoHomeNativeAddresses</span><span class="p">:</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">device</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">addresses_pb2</span><span class="o">.</span><span class="n">Addresses</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">label</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">label</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">addresses_pb2</span><span class="o">.</span><span class="n">Address</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Request all addresses from the device and return a filtered list if required</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            type (str, optional): Type of address to return (audio, video, gpio, meta). Defaults to None.</span>
+<span class="sd">            direction (str, optional): Specified direction (tx, rx). Defaults to None.</span>
+<span class="sd">            label (str, optional): Specific address label to return. Defaults to None.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Iterable[sords_pb2.Address]: Iterable object containing all devices addresses matching any search criteria</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">label</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">sort_addresses</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span> <span class="nb">type</span><span class="o">=</span><span class="nb">type</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="n">direction</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">label</span><span class="p">)]</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_sync_state</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Recreates the Addresses state dict with realtime data&quot;&quot;&quot;</span>
+
+        <span class="n">addrs</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">err</span> <span class="o">=</span> <span class="k">await</span> <span class="n">addresses_home</span><span class="o">.</span><span class="n">addresses_get_one</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">client</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+            <span class="n">argStreamToTopic</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;!!! Error getting addresses: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">addr</span><span class="o">.</span><span class="n">ID</span><span class="p">:</span> <span class="n">addr</span> <span class="k">for</span> <span class="n">addr</span> <span class="ow">in</span> <span class="n">addrs</span>
+            <span class="p">}</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_wait_for_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">src_label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dst_label</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Blocks until the expected destination label is updated in the source PeerIDs</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            src_label (str): Source label of the connection to wait for</span>
+<span class="sd">            dst_label (str): Destination label of the connection to wait for</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            AddressConnectError: Raised if the expected connection updates were not received within timeout</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">tn</span><span class="p">,</span> <span class="n">perf</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">(),</span> <span class="mf">0.0</span>
+        <span class="k">while</span> <span class="n">dst_label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="n">peer</span> <span class="k">for</span> <span class="n">peer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">src_label</span><span class="p">)</span><span class="o">.</span><span class="n">PeerIDs</span><span class="p">]:</span>
+            <span class="n">perf</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="n">tn</span>
+            <span class="k">if</span> <span class="n">perf</span> <span class="o">&gt;</span> <span class="n">CONNECTION_TIMEOUT</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;!!! GATE: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">src_label</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="n">AddressConnectError</span><span class="p">(</span>
+                    <span class="s2">&quot;The expected source address updates were not received in time.&quot;</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Connected: </span><span class="si">{</span><span class="n">src_label</span><span class="si">}</span><span class="s2"> &gt;&gt; </span><span class="si">{</span><span class="n">dst_label</span><span class="si">}</span><span class="s2"> in </span><span class="si">{</span><span class="n">perf</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">s&quot;</span><span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_wait_for_disconnection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dst_label</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Blocks until the PeerIDs of a single address gate is empty</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            dst_label (str): Label of a single destination address gate expected to be empty</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            AddressConnectError: Raised if the PeerID of the gate is not empty within timeout</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">tn</span><span class="p">,</span> <span class="n">perf</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">(),</span> <span class="mf">0.0</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dst_label</span><span class="p">)</span><span class="o">.</span><span class="n">PeerIDs</span><span class="p">):</span>
+                <span class="n">perf</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="n">tn</span>
+                <span class="k">if</span> <span class="n">perf</span> <span class="o">&gt;</span> <span class="n">CONNECTION_TIMEOUT</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">AddressConnectError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;The expected PeerID updates were not received in time for </span><span class="si">{</span><span class="n">dst_label</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="c1"># Destination does have PeerIDs, already disconnected</span>
+            <span class="k">pass</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Disconnected: </span><span class="si">{</span><span class="n">dst_label</span><span class="si">}</span><span class="s2"> in </span><span class="si">{</span><span class="n">perf</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">s&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="LawoHomeNativeAddresses.connect">
+<a class="viewcode-back" href="../../../ldf.attributes.html#ldf.attributes.addresses.LawoHomeNativeAddresses.connect">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">connect</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">conns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">sords_pb2</span><span class="o">.</span><span class="n">Gate</span><span class="p">,</span> <span class="n">sords_pb2</span><span class="o">.</span><span class="n">Gate</span><span class="p">]],</span>
+        <span class="n">event</span><span class="p">:</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Event</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">block_until_connect</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Make connections between multiple source and destiantion gates</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            conns (list[tuple[sords_pb2.Gate, sords_pb2.Gate]]): A list of tuples containing src, dest gates</span>
+<span class="sd">            event (asyncio.Event, optional): Event object to flag as done when connections are made. Defaults to None.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            AddressConnectError: The requested connection updates were not received within the expected time</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list[tuple[str, str]]: A list of tuples containing label formatted strings of the connections sent</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">connections</span> <span class="o">=</span> <span class="p">[</span><span class="n">create_connection</span><span class="p">(</span><span class="n">conn</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">conn</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">conn</span> <span class="ow">in</span> <span class="n">conns</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">connections</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">AddressConnectError</span><span class="p">(</span><span class="s2">&quot;No connections to connect!&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">err</span> <span class="o">=</span> <span class="k">await</span> <span class="n">addresses_home</span><span class="o">.</span><span class="n">addresses_connect</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">client</span><span class="p">,</span>
+                <span class="n">connections</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">err</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">AddressConnectError</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+
+        <span class="n">connection_labels</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">(</span>
+                <span class="s2">&quot;:&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">conn</span><span class="o">.</span><span class="n">Src</span><span class="o">.</span><span class="n">DevID</span><span class="p">,</span> <span class="n">conn</span><span class="o">.</span><span class="n">Src</span><span class="o">.</span><span class="n">SordID</span><span class="p">,</span> <span class="n">conn</span><span class="o">.</span><span class="n">Src</span><span class="o">.</span><span class="n">FlowID</span><span class="p">]),</span>
+                <span class="s2">&quot;:&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">conn</span><span class="o">.</span><span class="n">Dst</span><span class="o">.</span><span class="n">DevID</span><span class="p">,</span> <span class="n">conn</span><span class="o">.</span><span class="n">Dst</span><span class="o">.</span><span class="n">SordID</span><span class="p">,</span> <span class="n">conn</span><span class="o">.</span><span class="n">Dst</span><span class="o">.</span><span class="n">FlowID</span><span class="p">])</span>
+            <span class="p">)</span> <span class="k">for</span> <span class="n">conn</span> <span class="ow">in</span> <span class="n">connections</span>
+        <span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">block_until_connect</span><span class="p">:</span>
+            <span class="c1"># Block until source PeerIDs are updated</span>
+            <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span>
+                <span class="o">*</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_wait_for_connection</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">dst</span><span class="p">)</span> <span class="k">for</span> <span class="n">src</span><span class="p">,</span> <span class="n">dst</span> <span class="ow">in</span> <span class="n">connection_labels</span><span class="p">]</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">event</span><span class="p">:</span>
+            <span class="n">event</span><span class="o">.</span><span class="n">set</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">connection_labels</span></div>
+
+
+<div class="viewcode-block" id="LawoHomeNativeAddresses.disconnect">
+<a class="viewcode-back" href="../../../ldf.attributes.html#ldf.attributes.addresses.LawoHomeNativeAddresses.disconnect">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">disconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gates</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">sords_pb2</span><span class="o">.</span><span class="n">Gate</span><span class="p">],</span>
+                         <span class="n">event</span><span class="p">:</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Event</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Will disconnect Address Gates given a list of Gates</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            conns (list[sords_pb2.Gate]):</span>
+<span class="sd">                A list containing sord_pb2.Gate. Does a regular disconnect using only the Gate</span>
+<span class="sd">            event (asyncio.Event, optional):</span>
+<span class="sd">                Event to set. Defaults to None.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool: Wether or not self.device.addresses.state updated with the expected disconnection</span>
+<span class="sd">                  (The corresponding peer IDs of diconnected gates should be empty)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">gates</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;!!! Attempting to disconnect zero connections&quot;</span><span class="p">)</span>
+
+        <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;:&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">gate</span><span class="o">.</span><span class="n">DevID</span><span class="p">,</span> <span class="n">gate</span><span class="o">.</span><span class="n">SordID</span><span class="p">,</span> <span class="n">gate</span><span class="o">.</span><span class="n">FlowID</span><span class="p">])</span> <span class="k">for</span> <span class="n">gate</span> <span class="ow">in</span> <span class="n">gates</span>
+        <span class="p">]</span>
+
+        <span class="c1"># Disconnect the gates and block until disconnected</span>
+        <span class="k">await</span> <span class="n">addresses_home</span><span class="o">.</span><span class="n">addresses_disconnect</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">client</span><span class="p">,</span>
+            <span class="n">gates</span>
+        <span class="p">)</span>
+        <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span>
+            <span class="o">*</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_wait_for_disconnection</span><span class="p">(</span><span class="n">dst</span><span class="p">)</span> <span class="k">for</span> <span class="n">dst</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">event</span><span class="p">:</span>
+            <span class="n">event</span><span class="o">.</span><span class="n">set</span><span class="p">()</span>
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="LawoHomeNativeAddresses.by_sord_id">
+<a class="viewcode-back" href="../../../ldf.attributes.html#ldf.attributes.addresses.LawoHomeNativeAddresses.by_sord_id">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">by_sord_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sord_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">essence</span><span class="p">:</span> <span class="n">sords_pb2</span><span class="o">.</span><span class="n">Essence</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">addresses_pb2</span><span class="o">.</span><span class="n">Address</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Find all device addresses for a given sord ID, optionally provide an essence type to filter result.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            sord_id (str): Sord ID for the desired addresses</span>
+<span class="sd">            essence (sords_pb2.Essence, optional): Type of addressese to be returned. Defaults to None.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list[addresses_pb2.Address]: All Addresses associated with the supplied sord ID</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">addrs</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">addr</span> <span class="k">for</span> <span class="n">addr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">addr</span><span class="o">.</span><span class="n">Gate</span><span class="o">.</span><span class="n">SordID</span> <span class="o">==</span> <span class="n">sord_id</span>
+        <span class="p">]</span>
+        <span class="k">if</span> <span class="n">essence</span><span class="p">:</span>
+            <span class="n">addrs</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">addrs</span> <span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">Essence</span> <span class="o">==</span> <span class="n">essence</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Matched Addresses for </span><span class="si">{</span><span class="n">sord_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">addrs</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">addrs</span></div>
+</div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">Lawo Device Factory</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../ldf.attributes.html">ldf.attributes package</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Thomas Sutton.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.4.7</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

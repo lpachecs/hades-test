@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tests.conftest &#8212; Lawo Device Factory  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=12dfc556" />
+    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for tests.conftest</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datamodel.sords</span><span class="w"> </span><span class="kn">import</span> <span class="n">sords_pb2</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">systemlink.common.m_lookup</span><span class="w"> </span><span class="kn">import</span> <span class="n">MNumberLookup</span> <span class="k">as</span> <span class="n">MNumber</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">ldf.models.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">LawoHomeNativeDevice</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ldf.production</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_home_native</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tests.user_config</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">HOME_SERVERS</span><span class="p">,</span> <span class="n">MCX_IP_ADDRESS</span><span class="p">,</span> <span class="n">REF_DEVICE_GUID</span><span class="p">,</span>
+                               <span class="n">REF_DEVICE_TYPE</span><span class="p">,</span> <span class="n">TEST_DEVICES_GUIDS</span><span class="p">)</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="test_mixer">
+<a class="viewcode-back" href="../../tests.html#tests.conftest.test_mixer">[docs]</a>
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_mixer</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Uses LDF to produce a Virtual Mixer slice used in all tests&quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">TEST_DEVICES_GUIDS</span><span class="p">[</span><span class="s1">&#39;mcx&#39;</span><span class="p">]:</span>
+        <span class="n">pytest</span><span class="o">.</span><span class="n">skip</span><span class="p">(</span><span class="s2">&quot;No Virtual Mixer available for testing&quot;</span><span class="p">)</span>
+
+    <span class="n">device</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+        <span class="n">create_home_native</span><span class="p">(</span>
+            <span class="n">lawo_type</span><span class="o">=</span><span class="s2">&quot;mcx&quot;</span><span class="p">,</span>
+            <span class="n">guid</span><span class="o">=</span><span class="n">TEST_DEVICES_GUIDS</span><span class="p">[</span><span class="s1">&#39;mcx&#39;</span><span class="p">],</span>
+            <span class="n">client_addrs</span><span class="o">=</span><span class="n">HOME_SERVERS</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="k">yield</span> <span class="n">device</span></div>
+
+
+
+<div class="viewcode-block" id="test_mixer_connected">
+<a class="viewcode-back" href="../../tests.html#tests.conftest.test_mixer_connected">[docs]</a>
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_mixer_connected</span><span class="p">(</span><span class="n">test_mixer</span><span class="p">):</span>
+    <span class="c1"># Use custom IP?!</span>
+    <span class="k">await</span> <span class="n">test_mixer</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">host_address</span><span class="o">=</span><span class="n">MCX_IP_ADDRESS</span><span class="p">)</span>
+    <span class="c1"># await test_mixer.connect()</span>
+    <span class="k">yield</span> <span class="n">test_mixer</span>
+
+    <span class="k">await</span> <span class="n">test_mixer</span><span class="o">.</span><span class="n">wait_for</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">SYSTEM_BLINK</span><span class="p">)</span>  <span class="c1"># To make sure all changes are applied and send</span>
+    <span class="k">await</span> <span class="n">test_mixer</span><span class="o">.</span><span class="n">disconnect</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="build_device">
+<a class="viewcode-back" href="../../tests.html#tests.conftest.build_device">[docs]</a>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">build_device</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">guid</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LawoHomeNativeDevice</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build the requested device using LawoDeviceFactory</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        model (str): The model of the requested device</span>
+<span class="sd">        guid (str): GUID of the requested device</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        LawoHomeNativeDevice: A populated device model of the requested device</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="k">await</span> <span class="n">create_home_native</span><span class="p">(</span>
+        <span class="n">lawo_type</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+        <span class="n">guid</span><span class="o">=</span><span class="n">guid</span><span class="p">,</span>
+        <span class="n">client_addrs</span><span class="o">=</span><span class="n">HOME_SERVERS</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="create_sords_and_wait">
+<a class="viewcode-back" href="../../tests.html#tests.conftest.create_sords_and_wait">[docs]</a>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">create_sords_and_wait</span><span class="p">(</span>
+        <span class="n">device</span><span class="p">:</span> <span class="n">LawoHomeNativeDevice</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Iterable</span><span class="p">[</span><span class="n">sords_pb2</span><span class="o">.</span><span class="n">Sord</span><span class="p">],</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">sords_pb2</span><span class="o">.</span><span class="n">Sord</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a preset number of sender and receiver sords on a device and wait for expected updates</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        device (LawoHomeNativeDevice): Device that the sords will be created on</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple[Iterable[sords_pb2.Sord], Iterable[sords_pb2.Sord]]: Tuple of messages for created (senders, receivers)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">async</span> <span class="k">with</span> <span class="n">device</span><span class="p">:</span>
+        <span class="n">tasks</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span>
+            <span class="n">device</span><span class="o">.</span><span class="n">sords</span><span class="o">.</span><span class="n">create_audio</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="s1">&#39;tx&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;HOME-automated-QA-sender&#39;</span><span class="p">),</span>
+            <span class="n">device</span><span class="o">.</span><span class="n">sords</span><span class="o">.</span><span class="n">create_audio</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="s1">&#39;rx&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;HOME-automated-QA-receiver&#39;</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">senders</span><span class="p">,</span> <span class="n">receivers</span> <span class="o">=</span> <span class="k">await</span> <span class="n">tasks</span>
+        <span class="k">return</span> <span class="n">senders</span><span class="p">,</span> <span class="n">receivers</span></div>
+
+
+
+<div class="viewcode-block" id="clean_sords_and_wait">
+<a class="viewcode-back" href="../../tests.html#tests.conftest.clean_sords_and_wait">[docs]</a>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">clean_sords_and_wait</span><span class="p">(</span>
+        <span class="n">device</span><span class="p">:</span> <span class="n">LawoHomeNativeDevice</span><span class="p">,</span>
+        <span class="n">senders</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">sords_pb2</span><span class="o">.</span><span class="n">Sord</span><span class="p">],</span>
+        <span class="n">receivers</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">sords_pb2</span><span class="o">.</span><span class="n">Sord</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Remove any sords created (usually during setup) and wait for the appropriate updates</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        device (LawoHomeNativeDevice): _description_</span>
+<span class="sd">        senders (Iterable[sords_pb2.Sord]): _description_</span>
+<span class="sd">        receivers (Iterable[sords_pb2.Sord]): _description_</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">async</span> <span class="k">with</span> <span class="n">device</span><span class="o">.</span><span class="n">client</span><span class="p">:</span>
+        <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span>
+            <span class="n">device</span><span class="o">.</span><span class="n">sords</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">senders</span><span class="p">),</span>
+            <span class="n">device</span><span class="o">.</span><span class="n">sords</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">receivers</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">sender</span><span class="p">,</span> <span class="n">receiver</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">senders</span><span class="p">,</span> <span class="n">receivers</span><span class="p">):</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="n">sender</span><span class="o">.</span><span class="n">ID</span> <span class="ow">and</span> <span class="n">receiver</span><span class="o">.</span><span class="n">ID</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">ID</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">device</span><span class="o">.</span><span class="n">sords</span><span class="p">()]:</span>
+            <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">.1</span><span class="p">)</span>
+            <span class="k">continue</span></div>
+
+
+
+<div class="viewcode-block" id="home_servers">
+<a class="viewcode-back" href="../../tests.html#tests.conftest.home_servers">[docs]</a>
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">home_servers</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">HOME_SERVERS</span></div>
+
+
+
+<div class="viewcode-block" id="test_device_type">
+<a class="viewcode-back" href="../../tests.html#tests.conftest.test_device_type">[docs]</a>
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span><span class="p">(</span><span class="n">params</span><span class="o">=</span><span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">TEST_DEVICES_GUIDS</span><span class="p">],</span> <span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">TEST_DEVICES_GUIDS</span><span class="p">],</span> <span class="n">scope</span><span class="o">=</span><span class="s2">&quot;module&quot;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_device_type</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">request</span><span class="o">.</span><span class="n">param</span></div>
+
+
+
+<div class="viewcode-block" id="test_device_guid">
+<a class="viewcode-back" href="../../tests.html#tests.conftest.test_device_guid">[docs]</a>
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span><span class="p">(</span><span class="n">scope</span><span class="o">=</span><span class="s2">&quot;module&quot;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_device_guid</span><span class="p">(</span><span class="n">test_device_type</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">TEST_DEVICES_GUIDS</span><span class="p">[</span><span class="n">test_device_type</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="built_test_device">
+<a class="viewcode-back" href="../../tests.html#tests.conftest.built_test_device">[docs]</a>
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span><span class="p">(</span><span class="n">scope</span><span class="o">=</span><span class="s2">&quot;module&quot;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">built_test_device</span><span class="p">(</span><span class="n">test_device_type</span><span class="p">,</span> <span class="n">test_device_guid</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+        <span class="n">build_device</span><span class="p">(</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">test_device_type</span><span class="p">,</span>
+            <span class="n">guid</span><span class="o">=</span><span class="n">test_device_guid</span>
+        <span class="p">)</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="reference_device">
+<a class="viewcode-back" href="../../tests.html#tests.conftest.reference_device">[docs]</a>
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span><span class="p">(</span><span class="n">scope</span><span class="o">=</span><span class="s2">&quot;module&quot;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">reference_device</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+        <span class="n">build_device</span><span class="p">(</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">REF_DEVICE_TYPE</span><span class="p">,</span>
+            <span class="n">guid</span><span class="o">=</span><span class="n">REF_DEVICE_GUID</span>
+        <span class="p">)</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="require_audio_sords_target">
+<a class="viewcode-back" href="../../tests.html#tests.conftest.require_audio_sords_target">[docs]</a>
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span><span class="p">(</span><span class="n">scope</span><span class="o">=</span><span class="s1">&#39;class&#39;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">require_audio_sords_target</span><span class="p">(</span><span class="n">built_test_device</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Handles creation and post test removal of predefined sords on the target device for tests&quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">built_test_device</span><span class="o">.</span><span class="n">model</span> <span class="o">==</span> <span class="s1">&#39;.edge&#39;</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Target device </span><span class="si">{</span><span class="n">built_test_device</span><span class="o">.</span><span class="n">label</span><span class="si">}</span><span class="s2"> does not support sord creation or removal&quot;</span><span class="p">)</span>
+        <span class="n">senders</span> <span class="o">=</span> <span class="n">built_test_device</span><span class="o">.</span><span class="n">sords</span><span class="p">(</span><span class="n">direction</span><span class="o">=</span><span class="s1">&#39;tx&#39;</span><span class="p">,</span> <span class="n">essence</span><span class="o">=</span><span class="s1">&#39;audio&#39;</span><span class="p">)</span>
+        <span class="n">receivers</span> <span class="o">=</span> <span class="n">built_test_device</span><span class="o">.</span><span class="n">sords</span><span class="p">(</span><span class="n">direction</span><span class="o">=</span><span class="s1">&#39;rx&#39;</span><span class="p">,</span> <span class="n">essence</span><span class="o">=</span><span class="s1">&#39;audio&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">senders</span><span class="p">,</span> <span class="n">receivers</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+            <span class="n">create_sords_and_wait</span><span class="p">(</span><span class="n">built_test_device</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Created required target senders: </span><span class="si">{</span><span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">ID</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">senders</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Created required target receivers: </span><span class="si">{</span><span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">ID</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">receivers</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">yield</span> <span class="n">senders</span><span class="p">,</span> <span class="n">receivers</span>
+
+    <span class="k">if</span> <span class="n">built_test_device</span><span class="o">.</span><span class="n">model</span> <span class="o">!=</span> <span class="s1">&#39;.edge&#39;</span><span class="p">:</span>
+        <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">clean_sords_and_wait</span><span class="p">(</span><span class="n">built_test_device</span><span class="p">,</span> <span class="n">senders</span><span class="p">,</span> <span class="n">receivers</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="require_audio_sords_ref">
+<a class="viewcode-back" href="../../tests.html#tests.conftest.require_audio_sords_ref">[docs]</a>
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span><span class="p">(</span><span class="n">scope</span><span class="o">=</span><span class="s2">&quot;class&quot;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">require_audio_sords_ref</span><span class="p">(</span><span class="n">reference_device</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Handles creation and post test removal of predefined sords on the reference device for tests&quot;&quot;&quot;</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">reference_device</span><span class="o">.</span><span class="n">flags</span><span class="p">[</span><span class="s1">&#39;CreateDeleteSords&#39;</span><span class="p">]</span>
+        <span class="n">reference_device</span><span class="o">.</span><span class="n">flags</span><span class="p">[</span><span class="s1">&#39;IsStreamer&#39;</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">reference_device</span><span class="o">.</span><span class="n">model</span> <span class="o">==</span> <span class="s1">&#39;.edge&#39;</span><span class="p">:</span>
+            <span class="n">pytest</span><span class="o">.</span><span class="n">skip</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Target device </span><span class="si">{</span><span class="n">reference_device</span><span class="o">.</span><span class="n">label</span><span class="si">}</span><span class="s2"> does not support sord creation or removal&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">reference_device</span><span class="o">.</span><span class="n">model</span> <span class="o">==</span> <span class="s2">&quot;.edge&quot;</span><span class="p">:</span>
+        <span class="n">senders</span> <span class="o">=</span> <span class="n">reference_device</span><span class="o">.</span><span class="n">sords</span><span class="p">(</span><span class="n">direction</span><span class="o">=</span><span class="s1">&#39;tx&#39;</span><span class="p">,</span> <span class="n">essence</span><span class="o">=</span><span class="s1">&#39;audio&#39;</span><span class="p">)</span>
+        <span class="n">receivers</span> <span class="o">=</span> <span class="n">reference_device</span><span class="o">.</span><span class="n">sords</span><span class="p">(</span><span class="n">direction</span><span class="o">=</span><span class="s1">&#39;rx&#39;</span><span class="p">,</span> <span class="n">essence</span><span class="o">=</span><span class="s1">&#39;audio&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">senders</span><span class="p">,</span> <span class="n">receivers</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+            <span class="n">create_sords_and_wait</span><span class="p">(</span><span class="n">reference_device</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Created required reference senders: </span><span class="si">{</span><span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">ID</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">senders</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Created required reference receivers: </span><span class="si">{</span><span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">ID</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">receivers</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">yield</span> <span class="n">senders</span><span class="p">,</span> <span class="n">receivers</span>
+
+    <span class="k">if</span> <span class="n">reference_device</span><span class="o">.</span><span class="n">model</span> <span class="o">!=</span> <span class="s1">&#39;.edge&#39;</span><span class="p">:</span>
+        <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">clean_sords_and_wait</span><span class="p">(</span><span class="n">reference_device</span><span class="p">,</span> <span class="n">senders</span><span class="p">,</span> <span class="n">receivers</span><span class="p">))</span></div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Lawo Device Factory</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">lawo-device-factory</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Thomas Sutton.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.4.7</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,81 @@
+name: Test Lawo Device Factory
+
+on:
+  workflow_call:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - 'main'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # ---------------------------------------------------------------------------- #
+      #                                  PREPARATION                                 #
+      # ---------------------------------------------------------------------------- #
+
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '${{ variables.PYTHON_VERSION }}'
+
+      - name: Install Poetry
+        uses: Gr1N/setup-poetry@v9
+        with:
+          poetry-version: '${{ variables.POETRY_VERSION }}'
+
+      - name: Install dependencies
+        run: |
+          poetry config http-basic.gitea-pypi x-access-token ${{ secrets.asset_rw_access }}
+
+          poetry lock
+          poetry install --with dev --no-cache
+
+          poetry config --unset http-basic.gitea-pypi
+
+      # ---------------------------------------------------------------------------- #
+      #                                 CODE ANALYSIS                                #
+      # ---------------------------------------------------------------------------- #
+
+      # ---------------------------------- flake8 ---------------------------------- #
+      - name: Check with flake8
+        if: always()
+        run: |
+          poetry run flake8 ldf tests
+
+      # ----------------------------------- isort ---------------------------------- #
+      - name: Check with isort
+        if: always()
+        run: |
+          poetry run isort --check-only --diff ldf tests
+
+      # ----------------------------------- mypy ----------------------------------- #
+      - name: Check with mypy
+        if: always()
+        continue-on-error: true
+        run: |
+          poetry run mypy --disable-error-code=import-untyped ldf tests
+
+      # ---------------------------------- pytest ---------------------------------- #
+      - name: Run tests
+        if: always()
+        run: |
+          poetry run pytest -rEsxX -m 'not dependency' --junit-xml=test-results.xml ./tests
+
+      # ---------------------------------------------------------------------------- #
+      #                                    REPORT                                    #
+      # ---------------------------------------------------------------------------- #
+
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: TestResults.xml
+          path: test-results.xml

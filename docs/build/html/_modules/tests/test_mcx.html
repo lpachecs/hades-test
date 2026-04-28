@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tests.test_mcx &#8212; Lawo Device Factory  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=12dfc556" />
+    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for tests.test_mcx</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">systemlink.common.m_lookup</span><span class="w"> </span><span class="kn">import</span> <span class="n">MNumberLookup</span> <span class="k">as</span> <span class="n">MNumber</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">systemlink.datamodel.audiosystem</span><span class="w"> </span><span class="kn">import</span> <span class="n">MixerUserConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">systemlink.datamodel.base</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">MCX_STATE32</span><span class="p">,</span> <span class="n">BoolType</span><span class="p">,</span> <span class="n">MNumberType</span><span class="p">,</span>
+                                       <span class="n">StringType</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">systemlink.datamodel.channel</span><span class="w"> </span><span class="kn">import</span> <span class="n">Funktionseinheiten</span> <span class="k">as</span> <span class="n">FU</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">systemlink.datamodel.channel</span><span class="w"> </span><span class="kn">import</span> <span class="n">FunktionseinheitType</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">systemlink.datamodel.console</span><span class="w"> </span><span class="kn">import</span> <span class="n">LampState</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">systemlink.datamodel.signal</span><span class="w"> </span><span class="kn">import</span> <span class="n">SignalType</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">systemlink.datamodel.signal</span><span class="w"> </span><span class="kn">import</span> <span class="n">UniqueSignalAddress</span> <span class="k">as</span> <span class="n">USA</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">ldf.models.mcx</span><span class="w"> </span><span class="kn">import</span> <span class="n">LawoMCXDevice</span><span class="p">,</span> <span class="n">LawoMCXDeviceHelper</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tests</span><span class="w"> </span><span class="kn">import</span> <span class="n">log</span>
+
+<span class="n">TEST_PREFIX</span> <span class="o">=</span> <span class="s2">&quot;autogen_test_&quot;</span>  <span class="c1"># Prefix for all test strings used in the tests (production, snapshot, etc.)</span>
+
+
+<div class="viewcode-block" id="TestVirtualMixerGroup">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestVirtualMixerGroup">[docs]</a>
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">dependency</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">TestVirtualMixerGroup</span><span class="p">:</span>
+<div class="viewcode-block" id="TestVirtualMixerGroup.test_get_redunndancy_group">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestVirtualMixerGroup.test_get_redunndancy_group">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_get_redunndancy_group</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Test will validate the response to a get.devices.&lt;id&gt;.group&quot;&quot;&quot;</span>
+
+        <span class="k">async</span> <span class="k">with</span> <span class="n">test_mixer</span><span class="o">.</span><span class="n">client</span><span class="p">:</span>
+            <span class="n">group_info</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer</span><span class="o">.</span><span class="n">get_redundancy_group</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">([</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">group_info</span><span class="o">.</span><span class="n">MemberIDs</span><span class="p">])</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">pytest</span><span class="o">.</span><span class="n">xfail</span><span class="p">(</span><span class="s2">&quot;Get redundancy group request was successful but mixer is not grouped&quot;</span><span class="p">)</span>
+
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Group ID: </span><span class="si">{</span><span class="n">group_info</span><span class="o">.</span><span class="n">ID</span><span class="si">}</span><span class="se">\t</span><span class="s2"> Group GUID: </span><span class="si">{</span><span class="n">group_info</span><span class="o">.</span><span class="n">GUID</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Group leader: </span><span class="si">{</span><span class="n">group_info</span><span class="o">.</span><span class="n">LeaderID</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">group_info</span><span class="o">.</span><span class="n">LeaderID</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span>
+        <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">group_info</span><span class="o">.</span><span class="n">MemberIDs</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Group Members: </span><span class="si">{</span><span class="n">member</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">member</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span>
+        <span class="k">for</span> <span class="n">parent</span> <span class="ow">in</span> <span class="n">group_info</span><span class="o">.</span><span class="n">MemberIDs</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Parents: </span><span class="si">{</span><span class="n">parent</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span></div>
+
+
+<div class="viewcode-block" id="TestVirtualMixerGroup.test_create_mcx_group">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestVirtualMixerGroup.test_create_mcx_group">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">test_create_mcx_group</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer</span><span class="p">):</span>
+        <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="TestVirtualMixerGroup.test_failover_mcx_group">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestVirtualMixerGroup.test_failover_mcx_group">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">test_failover_mcx_group</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="TestVirtualMixerGroup.test_split_mcx_group">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestVirtualMixerGroup.test_split_mcx_group">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">test_split_mcx_group</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="TestLawoMCXDeviceHelper">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDeviceHelper">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">TestLawoMCXDeviceHelper</span><span class="p">:</span>
+<div class="viewcode-block" id="TestLawoMCXDeviceHelper.test_to_lawo_Hz">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDeviceHelper.test_to_lawo_Hz">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">test_to_lawo_Hz</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="n">LawoMCXDeviceHelper</span><span class="o">.</span><span class="n">to_lawo_Hz</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4914</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDeviceHelper.test_from_lawo_Hz">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDeviceHelper.test_from_lawo_Hz">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">test_from_lawo_Hz</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="n">LawoMCXDeviceHelper</span><span class="o">.</span><span class="n">from_lawo_Hz</span><span class="p">(</span><span class="mi">4914</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1000</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDeviceHelper.test_to_lawo_Q">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDeviceHelper.test_to_lawo_Q">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">test_to_lawo_Q</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="n">LawoMCXDeviceHelper</span><span class="o">.</span><span class="n">to_lawo_Q</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">64</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDeviceHelper.test_from_lawo_Q">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDeviceHelper.test_from_lawo_Q">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">test_from_lawo_Q</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="n">LawoMCXDeviceHelper</span><span class="o">.</span><span class="n">from_lawo_Q</span><span class="p">(</span><span class="mi">64</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDeviceHelper.test_to_lawo_s">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDeviceHelper.test_to_lawo_s">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">test_to_lawo_s</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="n">LawoMCXDeviceHelper</span><span class="o">.</span><span class="n">to_lawo_s</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">48000</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDeviceHelper.test_from_lawo_s">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDeviceHelper.test_from_lawo_s">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">test_from_lawo_s</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="n">LawoMCXDeviceHelper</span><span class="o">.</span><span class="n">from_lawo_s</span><span class="p">(</span><span class="mi">48000</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDeviceHelper.test_to_lawo_ms">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDeviceHelper.test_to_lawo_ms">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">test_to_lawo_ms</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="n">LawoMCXDeviceHelper</span><span class="o">.</span><span class="n">to_lawo_ms</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">48</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDeviceHelper.test_from_lawo_ms">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDeviceHelper.test_from_lawo_ms">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">test_from_lawo_ms</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="n">LawoMCXDeviceHelper</span><span class="o">.</span><span class="n">from_lawo_ms</span><span class="p">(</span><span class="mi">48</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDeviceHelper.test_to_lawo_dB">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDeviceHelper.test_to_lawo_dB">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">test_to_lawo_dB</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="n">LawoMCXDeviceHelper</span><span class="o">.</span><span class="n">to_lawo_dB</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">32</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDeviceHelper.test_from_lawo_dB">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDeviceHelper.test_from_lawo_dB">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">test_from_lawo_dB</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="n">LawoMCXDeviceHelper</span><span class="o">.</span><span class="n">from_lawo_dB</span><span class="p">(</span><span class="mi">32</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice">[docs]</a>
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">dependency</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">TestLawoMCXDevice</span><span class="p">:</span>
+<div class="viewcode-block" id="TestLawoMCXDevice.test_get_version">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_get_version">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_get_version</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="n">version</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">get_version</span><span class="p">()</span>
+        <span class="k">assert</span> <span class="n">version</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;Version is None&quot;</span>
+        <span class="k">assert</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">sw_version</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">version</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
+            <span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span>
+        <span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;Version mismatch: </span><span class="si">{</span><span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">sw_version</span><span class="si">}</span><span class="s2"> != </span><span class="si">{</span><span class="n">version</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;MCX Version: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">version</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_toggle_button">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_toggle_button">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_toggle_button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="c1"># Pre Check</span>
+        <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">assign_strip</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">c_cut</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">EU_Cut_Cut</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">BoolType</span><span class="p">)</span>
+        <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_event</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">EU_Cut_Cut</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">BoolType</span><span class="p">(</span><span class="kc">False</span><span class="p">))</span>
+
+        <span class="c1"># Test</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">toggle_button</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">CONSOLE_STRIP_CUT</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">wait_for</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">SYSTEM_BLINK</span><span class="p">)</span>
+        <span class="n">c_cut</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">EU_Cut_Cut</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">BoolType</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">c_cut</span><span class="o">.</span><span class="n">value</span> <span class="o">==</span> <span class="mi">1</span>
+
+        <span class="c1"># Cleanup</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">toggle_button</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">CONSOLE_STRIP_CUT</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">wait_for</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">SYSTEM_BLINK</span><span class="p">)</span>
+        <span class="n">c_cut</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">EU_Cut_Cut</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">BoolType</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">c_cut</span><span class="o">.</span><span class="n">value</span> <span class="ow">is</span> <span class="kc">False</span>
+        <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">unassign_strip</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_get_lamp_state">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_get_lamp_state">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_get_lamp_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">assign_strip</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">data</span><span class="p">:</span> <span class="n">LampState</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">get_lamp_state</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">CONSOLE_STRIP_CUT</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+
+        <span class="c1"># Cleanup</span>
+        <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">unassign_strip</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_toggle_button_to">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_toggle_button_to">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_toggle_button_to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">toggle_button_to</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">CONSOLE_ACCESS_PAN_STICK0_REVEAL</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">LampState</span><span class="o">.</span><span class="n">LAMP_YELLOW</span><span class="p">)</span>
+
+        <span class="n">lamp_state</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">get_lamp_state</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">CONSOLE_ACCESS_PAN_STICK0_REVEAL</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">lamp_state</span> <span class="o">==</span> <span class="n">LampState</span><span class="o">.</span><span class="n">LAMP_YELLOW</span>
+
+        <span class="c1"># Cleanup</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">toggle_button_to</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">CONSOLE_ACCESS_PAN_STICK0_REVEAL</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">LampState</span><span class="o">.</span><span class="n">LAMP_BLACK</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_toogle_button_from">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_toogle_button_from">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_toogle_button_from</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">assign_strip</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">toggle_button_to</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">CONSOLE_ACCESS_PAN_STICK0_REVEAL</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">LampState</span><span class="o">.</span><span class="n">LAMP_YELLOW</span><span class="p">)</span>
+
+        <span class="n">lamp_state</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">get_lamp_state</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">CONSOLE_ACCESS_PAN_STICK0_REVEAL</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">lamp_state</span> <span class="o">==</span> <span class="n">LampState</span><span class="o">.</span><span class="n">LAMP_YELLOW</span>
+
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">toggle_button_from</span><span class="p">(</span>
+            <span class="n">MNumber</span><span class="o">.</span><span class="n">CONSOLE_ACCESS_PAN_STICK0_REVEAL</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">LampState</span><span class="o">.</span><span class="n">LAMP_YELLOW</span>
+        <span class="p">)</span>
+
+        <span class="n">lamp_state</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">get_lamp_state</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">CONSOLE_ACCESS_PAN_STICK0_REVEAL</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">lamp_state</span> <span class="o">==</span> <span class="n">LampState</span><span class="o">.</span><span class="n">LAMP_BLACK</span>
+
+        <span class="c1"># Cleanup</span>
+        <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">unassign_strip</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_set_and_check">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_set_and_check">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_set_and_check</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">BoolType</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">set_and_check</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">CHANNEL_CHANNEL_CUT</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">wait_for</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">SYSTEM_BLINK</span><span class="p">)</span>
+        <span class="n">check</span><span class="p">:</span> <span class="n">BoolType</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">CHANNEL_CHANNEL_CUT</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">data_type</span><span class="o">=</span><span class="n">BoolType</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">check</span><span class="o">.</span><span class="n">value</span> <span class="ow">is</span> <span class="kc">True</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">set_and_check</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">CHANNEL_CHANNEL_CUT</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">BoolType</span><span class="p">(</span><span class="kc">False</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_assert_mnd">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_assert_mnd">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_assert_mnd</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">BoolType</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">set_and_check</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">CHANNEL_CHANNEL_CUT</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+        <span class="n">check</span><span class="p">:</span> <span class="n">BoolType</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">CHANNEL_CHANNEL_CUT</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">data_type</span><span class="o">=</span><span class="n">BoolType</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">check</span><span class="o">.</span><span class="n">value</span> <span class="ow">is</span> <span class="kc">True</span>
+        <span class="c1"># TEST</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">assert_MND</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">CHANNEL_CHANNEL_CUT</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+        <span class="c1">##</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">set_and_check</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">CHANNEL_CHANNEL_CUT</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">BoolType</span><span class="p">(</span><span class="kc">False</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_mcx_shutdown">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_mcx_shutdown">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">test_mcx_shutdown</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># TODO - Implement test... How??</span>
+        <span class="n">pytest</span><span class="o">.</span><span class="n">skip</span><span class="p">(</span><span class="s2">&quot;Test not implemented&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_mcx_shudown_cold">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_mcx_shudown_cold">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">test_mcx_shudown_cold</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># TODO - Implement test... How??</span>
+        <span class="n">pytest</span><span class="o">.</span><span class="n">skip</span><span class="p">(</span><span class="s2">&quot;Test not implemented&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_mcx_connect">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_mcx_connect">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_mcx_connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Test the connection of MCX device.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_connect</span><span class="p">(</span><span class="n">USA</span><span class="p">(</span><span class="n">SignalType</span><span class="o">.</span><span class="n">SigGen</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">USA</span><span class="p">(</span><span class="n">SignalType</span><span class="o">.</span><span class="n">DspInput</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+
+        <span class="n">check_source</span><span class="p">:</span> <span class="n">USA</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get</span><span class="p">(</span>
+            <span class="n">MNumber</span><span class="o">.</span><span class="n">SIGNAL_TARGET_MAIN_SOURCE</span><span class="p">,</span>
+            <span class="n">USA</span><span class="p">(</span><span class="n">SignalType</span><span class="o">.</span><span class="n">DspInput</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">address</span><span class="p">,</span>
+            <span class="n">data_type</span><span class="o">=</span><span class="n">USA</span>
+        <span class="p">)</span>
+
+        <span class="k">assert</span> <span class="n">check_source</span> <span class="o">==</span> <span class="n">USA</span><span class="p">(</span><span class="n">SignalType</span><span class="o">.</span><span class="n">SigGen</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># Cleanup</span>
+        <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_event</span><span class="p">(</span>
+            <span class="n">MNumber</span><span class="o">.</span><span class="n">SIGNAL_TARGET_MAIN_SOURCE</span><span class="p">,</span>
+            <span class="n">USA</span><span class="p">(</span><span class="n">SignalType</span><span class="o">.</span><span class="n">DspInput</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">address</span><span class="p">,</span>
+            <span class="n">MNumberType</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">INVALID_M</span><span class="p">)</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_mcx_disconnect">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_mcx_disconnect">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_mcx_disconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_connect</span><span class="p">(</span><span class="n">USA</span><span class="p">(</span><span class="n">SignalType</span><span class="o">.</span><span class="n">SigGen</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">USA</span><span class="p">(</span><span class="n">SignalType</span><span class="o">.</span><span class="n">DspInput</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+        <span class="n">check_source</span><span class="p">:</span> <span class="n">USA</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get</span><span class="p">(</span>
+            <span class="n">MNumber</span><span class="o">.</span><span class="n">SIGNAL_TARGET_MAIN_SOURCE</span><span class="p">,</span>
+            <span class="n">USA</span><span class="p">(</span><span class="n">SignalType</span><span class="o">.</span><span class="n">DspInput</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">address</span><span class="p">,</span>
+            <span class="n">data_type</span><span class="o">=</span><span class="n">USA</span>
+        <span class="p">)</span>
+        <span class="n">check_source</span><span class="o">.</span><span class="n">address</span> <span class="o">!=</span> <span class="n">MNumber</span><span class="o">.</span><span class="n">INVALID_M</span><span class="o">.</span><span class="n">value</span>
+        <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_disconnect</span><span class="p">(</span><span class="n">USA</span><span class="p">(</span><span class="n">SignalType</span><span class="o">.</span><span class="n">DspInput</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+
+        <span class="c1"># Check</span>
+        <span class="n">check_source</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get</span><span class="p">(</span>
+            <span class="n">MNumber</span><span class="o">.</span><span class="n">SIGNAL_TARGET_MAIN_SOURCE</span><span class="p">,</span>
+            <span class="n">USA</span><span class="p">(</span><span class="n">SignalType</span><span class="o">.</span><span class="n">DspInput</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">address</span><span class="p">,</span>
+            <span class="n">data_type</span><span class="o">=</span><span class="n">USA</span>
+        <span class="p">)</span>
+        <span class="k">assert</span> <span class="n">check_source</span><span class="o">.</span><span class="n">address</span> <span class="o">==</span> <span class="n">MNumber</span><span class="o">.</span><span class="n">INVALID_M</span><span class="o">.</span><span class="n">value</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_set_aux_gain">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_set_aux_gain">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_set_aux_gain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="n">lawo_db</span> <span class="o">=</span> <span class="n">LawoMCXDeviceHelper</span><span class="o">.</span><span class="n">to_lawo_dB</span><span class="p">(</span><span class="o">-</span><span class="mi">40</span><span class="p">)</span>
+        <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">set_aux_gain</span><span class="p">(</span><span class="n">FU</span><span class="o">.</span><span class="n">FU_AUX_BASE</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">lawo_db</span><span class="p">)</span>
+        <span class="n">check_db</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">get_aux_gain</span><span class="p">(</span><span class="n">FU</span><span class="o">.</span><span class="n">FU_AUX_BASE</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">lawo_db</span> <span class="o">==</span> <span class="n">check_db</span><span class="o">.</span><span class="n">value</span>
+        <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">set_aux_gain</span><span class="p">(</span><span class="n">FU</span><span class="o">.</span><span class="n">FU_AUX_BASE</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">LawoMCXDeviceHelper</span><span class="o">.</span><span class="n">to_lawo_dB</span><span class="p">(</span><span class="o">-</span><span class="mi">128</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_get_first_surround_signal">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_get_first_surround_signal">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">test_get_first_surround_signal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">8</span><span class="p">):</span>
+            <span class="k">assert</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">get_first_surround_signal</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">16</span><span class="p">):</span>
+            <span class="k">assert</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">get_first_surround_signal</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">==</span> <span class="mi">8</span>
+        <span class="n">START_SURROUND</span> <span class="o">=</span> <span class="n">FU</span><span class="o">.</span><span class="n">FU_SURROUND_MASTER_BASE</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">8</span><span class="p">):</span>
+            <span class="n">test_i</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="n">START_SURROUND</span>
+            <span class="k">assert</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">get_first_surround_signal</span><span class="p">(</span><span class="n">test_i</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_is_signal_surround_master">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_is_signal_surround_master">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">test_is_signal_surround_master</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">8</span><span class="p">):</span>
+            <span class="k">assert</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">is_signal_surround_master</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span>
+        <span class="k">assert</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">is_signal_surround_master</span><span class="p">(</span><span class="n">FU</span><span class="o">.</span><span class="n">FU_SURROUND_MASTER_BASE</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_get_surround_master">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_get_surround_master">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_get_surround_master</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">6</span><span class="p">):</span>
+            <span class="n">sm</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">get_surround_master</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+            <span class="n">check</span> <span class="o">=</span> <span class="p">(</span><span class="n">FU</span><span class="o">.</span><span class="n">FU_SURROUND_MASTER_BASE</span> <span class="o">+</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="n">sm</span> <span class="o">==</span> <span class="n">check</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">14</span><span class="p">):</span>
+            <span class="k">assert</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">get_surround_master</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="n">FU</span><span class="o">.</span><span class="n">FU_SURROUND_MASTER_BASE</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_mcx_bus_assign">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_mcx_bus_assign">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_mcx_bus_assign</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="n">test_bus</span> <span class="o">=</span> <span class="n">FU</span><span class="o">.</span><span class="n">FU_SUMM_BASE</span>
+        <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_bus_assign</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">test_bus</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Check</span>
+        <span class="n">sum_num</span> <span class="o">=</span> <span class="n">MNumber</span><span class="o">.</span><span class="n">EU_Summe_Begin</span> <span class="o">+</span> <span class="p">(</span><span class="n">test_bus</span> <span class="o">-</span> <span class="n">FunktionseinheitType</span><span class="o">.</span><span class="n">get_fu_base</span><span class="p">(</span><span class="n">test_bus</span><span class="p">))</span>
+        <span class="n">connected</span><span class="p">:</span> <span class="n">BoolType</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get</span><span class="p">(</span><span class="n">sum_num</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">data_type</span><span class="o">=</span><span class="n">BoolType</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">connected</span><span class="o">.</span><span class="n">value</span> <span class="ow">is</span> <span class="kc">True</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">wait_for</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">SYSTEM_BLINK</span><span class="p">)</span>
+
+        <span class="c1"># Cleanup</span>
+        <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_bus_assign</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">test_bus</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_mcx_sum_assign">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_mcx_sum_assign">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_mcx_sum_assign</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="k">for</span> <span class="nb">sum</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">):</span>
+            <span class="c1"># Test</span>
+            <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_sum_assign</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">sum</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+            <span class="c1"># Check</span>
+            <span class="n">sum_num</span> <span class="o">=</span> <span class="n">MNumber</span><span class="o">.</span><span class="n">EU_Summe_Begin</span><span class="o">.</span><span class="n">value</span> <span class="o">+</span> <span class="nb">sum</span>
+            <span class="n">connected</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get</span><span class="p">(</span><span class="n">sum_num</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">BoolType</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="n">connected</span><span class="o">.</span><span class="n">value</span> <span class="ow">is</span> <span class="kc">True</span>
+
+            <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">wait_for</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">SYSTEM_BLINK</span><span class="p">)</span>
+            <span class="c1"># Cleanup</span>
+            <span class="c1"># Test</span>
+            <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_sum_assign</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">sum</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+            <span class="c1"># Check</span>
+            <span class="n">connected</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get</span><span class="p">(</span><span class="n">sum_num</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">BoolType</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="n">connected</span><span class="o">.</span><span class="n">value</span> <span class="ow">is</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_mcx_group_assign">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_mcx_group_assign">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_mcx_group_assign</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">):</span>
+            <span class="c1"># Test</span>
+            <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_group_assign</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">group</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+            <span class="c1"># Check</span>
+            <span class="n">group_num</span> <span class="o">=</span> <span class="n">MNumber</span><span class="o">.</span><span class="n">EU_Group_Begin</span><span class="o">.</span><span class="n">value</span> <span class="o">+</span> <span class="n">group</span>
+            <span class="n">connected</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get</span><span class="p">(</span><span class="n">group_num</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">BoolType</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="n">connected</span><span class="o">.</span><span class="n">value</span> <span class="ow">is</span> <span class="kc">True</span>
+
+            <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">wait_for</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">SYSTEM_BLINK</span><span class="p">)</span>
+            <span class="c1"># Test</span>
+            <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_group_assign</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">group</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+            <span class="c1"># Check</span>
+            <span class="n">connected</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get</span><span class="p">(</span><span class="n">group_num</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">BoolType</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="n">connected</span><span class="o">.</span><span class="n">value</span> <span class="ow">is</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_mcx_aux_assign">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_mcx_aux_assign">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_mcx_aux_assign</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">aux</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">):</span>
+            <span class="c1"># Test</span>
+            <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_aux_assign</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">aux</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+            <span class="c1"># Check</span>
+            <span class="k">if</span> <span class="n">aux</span> <span class="o">&amp;</span> <span class="mi">1</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">aux_num</span> <span class="o">=</span> <span class="n">MNumber</span><span class="o">.</span><span class="n">EU_Aux1_OnOffR</span><span class="o">.</span><span class="n">value</span> <span class="o">+</span> <span class="mi">16</span> <span class="o">*</span> <span class="p">(</span><span class="n">aux</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">aux_num</span> <span class="o">=</span> <span class="n">MNumber</span><span class="o">.</span><span class="n">EU_Aux1_OnOffL</span><span class="o">.</span><span class="n">value</span> <span class="o">+</span> <span class="mi">16</span> <span class="o">*</span> <span class="p">(</span><span class="n">aux</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">connected</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get</span><span class="p">(</span><span class="n">aux_num</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">BoolType</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="n">connected</span><span class="o">.</span><span class="n">value</span> <span class="ow">is</span> <span class="kc">True</span>
+
+            <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">wait_for</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">SYSTEM_BLINK</span><span class="p">)</span>
+            <span class="c1"># Test</span>
+            <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_aux_assign</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">aux</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+            <span class="c1"># Check</span>
+            <span class="n">connected</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get</span><span class="p">(</span><span class="n">aux_num</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">BoolType</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="n">connected</span><span class="o">.</span><span class="n">value</span> <span class="ow">is</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_mcx_get_active_dsp">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_mcx_get_active_dsp">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_mcx_get_active_dsp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="n">dsp</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get_active_dsp</span><span class="p">()</span>
+        <span class="k">assert</span> <span class="n">dsp</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_mcx_get_dsp_channel_count">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_mcx_get_dsp_channel_count">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_mcx_get_dsp_channel_count</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get_dsp_channel_count</span><span class="p">()</span>
+        <span class="k">assert</span> <span class="n">count</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_mcx_get_dsp_bus_count">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_mcx_get_dsp_bus_count">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_mcx_get_dsp_bus_count</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get_dsp_bus_count</span><span class="p">()</span>
+        <span class="k">assert</span> <span class="n">count</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_mcx_get_dsp_listen_count">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_mcx_get_dsp_listen_count">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_mcx_get_dsp_listen_count</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get_dsp_listen_count</span><span class="p">()</span>
+        <span class="k">assert</span> <span class="n">count</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_mcx_get_dsp_automix_group_count">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_mcx_get_dsp_automix_group_count">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_mcx_get_dsp_automix_group_count</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get_dsp_automix_group_count</span><span class="p">()</span>
+        <span class="k">assert</span> <span class="n">count</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_mcx_get_dsp_ext_key_count">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_mcx_get_dsp_ext_key_count">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_mcx_get_dsp_ext_key_count</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get_dsp_ext_key_count</span><span class="p">()</span>
+        <span class="k">assert</span> <span class="n">count</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_mcx_get_dsp_talkback_count">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_mcx_get_dsp_talkback_count">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_mcx_get_dsp_talkback_count</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get_dsp_talkback_count</span><span class="p">()</span>
+        <span class="k">assert</span> <span class="n">count</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_mcx_get_dsp_siggen_count">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_mcx_get_dsp_siggen_count">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_mcx_get_dsp_siggen_count</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get_dsp_siggen_count</span><span class="p">()</span>
+        <span class="k">assert</span> <span class="n">count</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_mcx_apply_uhd_dsp_config">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_mcx_apply_uhd_dsp_config">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_mcx_apply_uhd_dsp_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="c1"># Get the current config to cleanup later</span>
+        <span class="n">orig_config</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">AUDIOSYSTEM_MIXER_USER_CONFIG</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">MixerUserConfig</span><span class="p">)</span>
+
+        <span class="c1"># Check for ValueError - Input, Aux, Sum and Groups must be multiples of 8</span>
+        <span class="k">with</span> <span class="n">pytest</span><span class="o">.</span><span class="n">raises</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
+            <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_apply_uhd_dsp_config</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">do_check</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_apply_uhd_dsp_config</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">do_check</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">wait_for</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">SYSTEM_BLINK</span><span class="p">)</span>
+
+        <span class="c1"># Cleanup</span>
+        <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_event</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">AUDIOSYSTEM_MIXER_USER_CONFIG</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">orig_config</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_apply_crm_config">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_apply_crm_config">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_apply_crm_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="c1"># Get the current config to cleanup later</span>
+        <span class="n">orig_config</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">AUDIOSYSTEM_MIXER_USER_CONFIG</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">MixerUserConfig</span><span class="p">)</span>
+        <span class="n">Crm1</span><span class="p">,</span> <span class="n">Crm2</span><span class="p">,</span> <span class="n">CrmHp1</span><span class="p">,</span> <span class="n">CrmHp2</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_apply_crm_config</span><span class="p">(</span><span class="n">Crm1</span><span class="p">,</span> <span class="n">Crm2</span><span class="p">,</span> <span class="n">CrmHp1</span><span class="p">,</span> <span class="n">CrmHp2</span><span class="p">)</span>
+
+        <span class="n">new_config</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">AUDIOSYSTEM_MIXER_USER_CONFIG</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">MixerUserConfig</span><span class="p">)</span>
+
+        <span class="n">check_config</span> <span class="o">=</span> <span class="n">orig_config</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;CRM Config: </span><span class="si">{</span><span class="n">check_config</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;CRM Config: </span><span class="si">{</span><span class="n">new_config</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">check_config</span><span class="o">.</span><span class="n">crm1_enabled</span> <span class="o">=</span> <span class="n">Crm1</span>
+        <span class="n">check_config</span><span class="o">.</span><span class="n">crm2_enabled</span> <span class="o">=</span> <span class="n">Crm2</span>
+        <span class="n">check_config</span><span class="o">.</span><span class="n">crm_hp1_enabled</span> <span class="o">=</span> <span class="n">CrmHp1</span>
+        <span class="n">check_config</span><span class="o">.</span><span class="n">crm_hp2_enabled</span> <span class="o">=</span> <span class="n">CrmHp2</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">check_config</span> <span class="o">!=</span> <span class="n">new_config</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">MixerUserConfig</span><span class="o">.</span><span class="n">get_str_compare</span><span class="p">(</span><span class="n">check_config</span><span class="p">,</span> <span class="n">new_config</span><span class="p">))</span>
+                <span class="k">assert</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;CRM Config did not match&quot;</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="c1"># Cleanup</span>
+            <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_event</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">AUDIOSYSTEM_MIXER_USER_CONFIG</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">orig_config</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_save_snapshot">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_save_snapshot">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_save_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">save_snapshot</span><span class="p">(</span><span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;folder&quot;</span><span class="p">)</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">_systemlink_connection</span><span class="o">.</span><span class="n">mcx_get_raw</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">SYSTEM_SNAPSHOT</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">folder</span> <span class="o">=</span> <span class="n">StringType</span><span class="p">()</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">folder</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">StringType</span><span class="p">()</span>
+        <span class="n">name</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">folder</span><span class="o">.</span><span class="n">string</span> <span class="o">==</span> <span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;folder&quot;</span>
+        <span class="k">assert</span> <span class="n">name</span><span class="o">.</span><span class="n">string</span> <span class="o">==</span> <span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;name&quot;</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_load_snapshot">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_load_snapshot">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_load_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">save_snapshot</span><span class="p">(</span><span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;name_old&quot;</span><span class="p">,</span> <span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;folder_old&quot;</span><span class="p">)</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">save_snapshot</span><span class="p">(</span><span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;name_new&quot;</span><span class="p">,</span> <span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;folder_new&quot;</span><span class="p">)</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">load_snapshot</span><span class="p">(</span><span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;name_old&quot;</span><span class="p">,</span> <span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;folder_old&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Check</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">_systemlink_connection</span><span class="o">.</span><span class="n">mcx_get_raw</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">SYSTEM_SNAPSHOT</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">d_folder</span><span class="p">,</span> <span class="n">d_name</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:</span><span class="mi">32</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="mi">32</span><span class="p">:]</span>
+        <span class="n">folder</span> <span class="o">=</span> <span class="n">StringType</span><span class="p">()</span>
+        <span class="n">folder</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">d_folder</span><span class="p">)</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">StringType</span><span class="p">()</span>
+        <span class="n">name</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">d_name</span><span class="p">)</span>
+
+        <span class="k">assert</span> <span class="n">folder</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span> <span class="o">==</span> <span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;folder_old&quot;</span>
+        <span class="k">assert</span> <span class="n">name</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span> <span class="o">==</span> <span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;name_old&quot;</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_delete_snapshot">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_delete_snapshot">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_delete_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">save_snapshot</span><span class="p">(</span><span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;folder&quot;</span><span class="p">)</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">delete_snapshot</span><span class="p">(</span><span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;folder&quot;</span><span class="p">)</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">_systemlink_connection</span><span class="o">.</span><span class="n">mcx_get_raw</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">SYSTEM_SNAPSHOT</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">folder</span> <span class="o">=</span> <span class="n">StringType</span><span class="p">()</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">folder</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">StringType</span><span class="p">()</span>
+        <span class="n">name</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">folder</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">name</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_get_currrent_production">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_get_currrent_production">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_get_currrent_production</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">get_current_production</span><span class="p">()</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Current Production: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_save_production">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_save_production">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_save_production</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">save_production</span><span class="p">(</span><span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;production&quot;</span><span class="p">)</span>
+
+        <span class="n">name</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">get_current_production</span><span class="p">()</span>
+        <span class="k">assert</span> <span class="n">name</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span> <span class="o">==</span> <span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;production&quot;</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_load_production">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_load_production">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_load_production</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="n">MAX_PROTDUCTION_LOAD_TIME</span> <span class="o">=</span> <span class="mi">30</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">save_production</span><span class="p">(</span><span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;production&quot;</span><span class="p">)</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">save_production</span><span class="p">(</span><span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;production_old&quot;</span><span class="p">)</span>
+
+        <span class="k">async</span> <span class="k">with</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">timeout</span><span class="p">(</span><span class="n">MAX_PROTDUCTION_LOAD_TIME</span><span class="p">):</span>
+            <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">load_production</span><span class="p">(</span><span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;production&quot;</span><span class="p">)</span>
+
+        <span class="n">name</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">get_current_production</span><span class="p">()</span>
+        <span class="k">assert</span> <span class="n">name</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span> <span class="o">==</span> <span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;production&quot;</span>
+
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">load_production</span><span class="p">(</span><span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;production_old&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_delete_production">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_delete_production">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_delete_production</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">pytest</span><span class="o">.</span><span class="n">skip</span><span class="p">(</span><span class="s2">&quot;Currently not testable.&quot;</span><span class="p">)</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">save_production</span><span class="p">(</span><span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;production&quot;</span><span class="p">)</span>
+        <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">delete_production</span><span class="p">(</span><span class="n">TEST_PREFIX</span> <span class="o">+</span> <span class="s2">&quot;production&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_assign_strip">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_assign_strip">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_assign_strip</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="n">strip</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">fu_channel</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">assign_strip</span><span class="p">(</span><span class="n">strip</span><span class="p">,</span> <span class="n">fu_channel</span><span class="p">)</span>
+
+        <span class="n">check_fu_channel</span><span class="p">:</span> <span class="n">MCX_STATE32</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get</span><span class="p">(</span>
+            <span class="n">MNumber</span><span class="o">.</span><span class="n">CONSOLE_STRIP_FRONT_CHANNEL</span><span class="p">,</span> <span class="n">strip</span><span class="p">,</span> <span class="n">data_type</span><span class="o">=</span><span class="n">MCX_STATE32</span>
+        <span class="p">)</span>
+        <span class="k">assert</span> <span class="n">fu_channel</span> <span class="o">==</span> <span class="n">check_fu_channel</span><span class="o">.</span><span class="n">value</span>
+
+        <span class="c1"># Cleanup</span>
+        <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_event</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">CONSOLE_STRIP_FRONT_CHANNEL</span><span class="p">,</span> <span class="n">strip</span><span class="p">,</span> <span class="n">MNumberType</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">INVALID_M</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="TestLawoMCXDevice.test_multi_assign_strip">
+<a class="viewcode-back" href="../../tests.html#tests.test_mcx.TestLawoMCXDevice.test_multi_assign_strip">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_multi_assign_strip</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_mixer_connected</span><span class="p">:</span> <span class="n">LawoMCXDevice</span><span class="p">):</span>
+        <span class="n">strip</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">fu_channel</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">multi_assign_strip</span><span class="p">(</span><span class="n">strip</span><span class="p">,</span> <span class="n">fu_channel</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
+            <span class="n">check_fu_channel</span><span class="p">:</span> <span class="n">MCX_STATE32</span> <span class="o">=</span> <span class="k">await</span> <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_get</span><span class="p">(</span>
+                <span class="n">MNumber</span><span class="o">.</span><span class="n">CONSOLE_STRIP_FRONT_CHANNEL</span><span class="p">,</span> <span class="n">strip</span> <span class="o">+</span> <span class="n">i</span><span class="p">,</span> <span class="n">data_type</span><span class="o">=</span><span class="n">MCX_STATE32</span>
+            <span class="p">)</span>
+            <span class="k">assert</span> <span class="n">fu_channel</span> <span class="o">+</span> <span class="n">i</span> <span class="o">==</span> <span class="n">check_fu_channel</span><span class="o">.</span><span class="n">value</span>
+
+        <span class="c1"># Cleanup</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
+            <span class="n">test_mixer_connected</span><span class="o">.</span><span class="n">mcx_event</span><span class="p">(</span>
+                <span class="n">MNumber</span><span class="o">.</span><span class="n">CONSOLE_STRIP_FRONT_CHANNEL</span><span class="p">,</span> <span class="n">strip</span> <span class="o">+</span> <span class="n">i</span><span class="p">,</span> <span class="n">MNumberType</span><span class="p">(</span><span class="n">MNumber</span><span class="o">.</span><span class="n">INVALID_M</span><span class="p">)</span>
+            <span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Lawo Device Factory</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">lawo-device-factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ldf.models.html">ldf.models package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ldf.models.powercore.html">ldf.models.powercore package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ldf.models.home_controller.html">ldf.models.home_controller package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ldf.attributes.html">ldf.attributes package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ldf.common.html">ldf.common package</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Thomas Sutton.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.4.7</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

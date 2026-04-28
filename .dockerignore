@@ -1,0 +1,40 @@
+# Environment files
+.env
+.env.*
+.venv/
+.git/
+.gitignore
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.vscode/
+*.lock
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Build
+dist/
+build/
+docs/build/
+out/
+coverage/
+.poetry/
+.flake8/
+Jenkinsfile
+make.bat
+Makefile
+
+# Docker files
+Dockerfile*
+docker-compose*
+
+# Misc
+CHANGELOG.md
+.idea/
+.vscode/

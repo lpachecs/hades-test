@@ -1,0 +1,91 @@
+[build-system]
+requires = ["poetry-core>=2.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
+build-backend = "poetry_dynamic_versioning.backend"
+
+[tool.poetry]
+name = "lawo-device-factory"
+authors = [
+    "Thomas Sutton <tommy.sutton@lawo.com>",
+    "Aaron Pereira  <aaron.pereira@lawo.com>",
+    "Tobias Kindt <tobias.kindt@lawo.com>",
+    "Jan Petzold <jan.petzold@lawo.com>"
+]
+description = "A pure Python API for controlling and configuring Lawo solutions"
+readme = "README.md"
+packages = [
+    {include = "ldf"},
+    {include = "ldf/py.typed"},
+]
+version = "0.0.0"
+
+[tool.poetry.requires-plugins]
+poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = ["plugin"] }
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+style = "semver"
+pattern = "default-unprefixed"
+format = "{base}"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+systemlink = "^12.2.0.0.0"
+datamodel = "^3.3.1"
+asyncio = "^3.4.3"
+nats-py = "^2.9.0"
+paramiko = "^3.2.0"
+sdp-transform = "^1.0.6"
+pywinrm = "^0.4.2"
+types-requests = "^2.32.0"
+telnetlib3 = "^2.0.8"
+pyserial-asyncio = "^0.6"
+jsonpointer = "^3.0.0"
+openai = "^2.0.0"
+mcp = {extras = ["cli"], version = "^1.15.0"}
+fastapi = "^0.118.0"
+etcd3 = "^0.12.0"
+flask = "^3.1.2"
+pygnmi = "^0.8.15"
+ember-py = {version = "^1.0.5", source = "gitea-pypi"}
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.29.0"
+sphinx = "^7.2.6"
+sphinxcontrib-napoleon = "^0.7"
+furo = "^2025.9.25"
+pytest = "^8.1.0"
+pytest-asyncio = "^0.24.0"
+flake8 = "^7.1.2"
+isort = "^5.10.3"
+mypy = "^1.15.0"
+
+[[tool.poetry.source]]
+name = "PyPI"
+priority = "primary"
+
+[[tool.poetry.source]]
+name = "gitea-pypi"
+url = "https://ccp-tea.lawo.de/api/packages/quality-assurance/pypi/simple/"
+priority = "supplemental"
+
+[[tool.poetry.source]]
+name = "gitea-pub"
+url = "https://ccp-tea.lawo.de/api/packages/quality-assurance/pypi/"
+priority = "supplemental"
+
+[tool.pytest.ini_options]
+markers = [
+    "dependency: Tests that require external lawo devices to be available",
+]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "module"
+log_cli = "true"
+log_cli_level = "INFO"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+log_file = "tests/pytest.log"
+log_file_level = "DEBUG"
+
+[tool.mypy]
+ignore_missing_imports = false
+disable_error_code = ['attr-defined']  # Fixes mypy failures for datamodel imports

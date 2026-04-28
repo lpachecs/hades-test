@@ -1,0 +1,739 @@
+openapi: "3.0.2"
+info:
+  title: vsmGadgetServer
+  version: "5.6"
+servers:
+  - description: "Gadget Server"
+    url: "{protocol}://{ip_or_hostname}:{port}/dex"
+    variables:
+      {
+        ip_or_hostname:
+          {
+            default: "gadgetserver.com",
+            description: "The IP or hostname to use",
+          },
+        protocol:
+          {
+            default: "https",
+            description: "The protocol to use",
+            enum: ["http", "https"],
+          },
+        port: { default: "50080", description: "The port" },
+      }
+
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+
+  schemas:
+    Handle:
+      type: string
+      description: The handle
+      example: "4f35a9df-aa22-48a4-a01f-c123747421e0"
+    Type:
+      type: integer
+      enum:
+        - 0x0000
+        - 0x0001
+        - 0x0002
+        - 0x0004
+        - 0x0008
+        - 0x0010
+        - 0x0040
+        - 0x0080
+      description: |
+        Options:
+        * `0x0000` - No Type
+        * `0x0001` - Protocol
+        * `0x0002` - ProtocolFactory
+        * `0x0004` - DiscardedAssembly
+        * `0x0008` - ServerNode
+        * `0x0010` - LogWriter
+        * `0x0040` - Plugin
+        * `0x0080` - All
+      example: 0x0001
+    SessionHost:
+      type: object
+      properties:
+        Handle:
+          $ref: "#/components/schemas/Handle"
+        Hostname:
+          type: string
+          description: The hostname of the session host
+          example: "10.3.168.8"
+        ServiceHostname:
+          type: string
+          description: The service hostname of the session host
+          example: "Gadget-Server-A"
+        AddressList:
+          type: array
+          items:
+            type: string
+          description: The list of addresses of the session host
+          example: ["10.3.168.8"]
+        Comment:
+          type: string
+          description: The comment of the session host
+          example: "This is a comment"
+        IsLocalHost:
+          type: boolean
+          description: Whether the session host is the local host
+          example: false
+        IsElevated:
+          type: boolean
+          description: Whether the session host is elevated
+          example: false
+        OsVersion:
+          type: string
+          description: The OS version of the session host
+          example: "Microsoft Windows NT 6.2.9200.0"
+        ClrVersion:
+          type: string
+          description: The CLR version of the session host
+          example: "4.0.30319.42000"
+        NotificationUri:
+          type: string
+          description: The notification of the session host
+          example: "wss://10.5.232.139:50082"
+    OperationResult:
+      type: integer
+      description: The operation result
+      example: 0
+    Resource:
+      type: object
+      properties:
+        Handle:
+          $ref: "#/components/schemas/Handle"
+        Type:
+          $ref: "#/components/schemas/Type"
+    Resources:
+      type: array
+      items:
+        $ref: "#/components/schemas/Resource"
+    ProtocolOptions:
+      type: object
+      properties:
+        Name:
+          type: string
+          description: The name of the option
+        Description:
+          type: string
+          description: The description of the option
+        Type:
+          type: integer
+        Flags:
+          type: integer
+        Default:
+          type: string
+          description: The default value of the option. Can be string, integer, or boolean
+        Minimum:
+          type: integer
+        Maximum:
+          type: integer
+        Regex:
+          type: string
+        Values:
+          type: array
+          items:
+            type: string
+    ProtocolLayer:
+      type: object
+      properties:
+        Index:
+          type: integer
+          description: The index of the layer
+        Name:
+          type: string
+          description: The name of the layer
+    ProtocolDescription:
+      type: object
+      properties:
+        Type:
+          $ref: "#/components/schemas/Type"
+        ProtocolGuid:
+          type: string
+          description: The GUID of the protocol
+        ProtocolName:
+          type: string
+          description: The name of the protocol
+        CompanyName:
+          type: string
+          description: The company name of the protocol
+        SupportedDeviceNames:
+          type: array
+          items:
+            type: string
+          description: The list of supported device names
+        StreamType:
+          type: integer
+          description: The stream type
+        Port:
+          type: integer
+          description: The port
+        Layers:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProtocolLayer"
+          description: The list of layers
+        Options:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProtocolOptions"
+          description: The list of options
+    ProtocolVersion:
+      type: object
+      properties:
+        Company:
+          type: string
+          description: The company of the protocol
+        Description:
+          type: string
+          description: The description of the protocol
+        Filename:
+          type: string
+          description: The filename of the protocol
+        Major:
+          type: integer
+          description: The major version of the protocol
+        Minor:
+          type: integer
+          description: The minor version of the protocol
+        Private:
+          type: integer
+          description: The private version of the protocol
+        Build:
+          type: integer
+          description: The build version of the protocol
+    ProtocolFactory:
+      type: object
+      properties:
+        Handle:
+          $ref: "#/components/schemas/Handle"
+        IsInitialized:
+          type: boolean
+          description: Whether the protocol factory is initialized
+        Description:
+          $ref: "#/components/schemas/ProtocolDescription"
+        Version:
+          $ref: "#/components/schemas/ProtocolVersion"
+    ProtocolMapping:
+      type: object
+      properties:
+        Handle:
+          $ref: "#/components/schemas/Handle"
+        Key:
+          type: object
+          properties:
+            ValueAsString:
+              type: string
+            ValueType:
+              type: integer
+    ProtocolMappings:
+      type: array
+      items:
+        $ref: "#/components/schemas/ProtocolMapping"
+    ProtocolDriverMappings:
+      type: object
+      properties:
+        Mappings:
+          $ref: "#/components/schemas/ProtocolMappings"
+    SingleValueOption:
+      type: object
+      properties:
+        Name:
+          type: string
+          description: The name of the option
+        ValueAsString:
+          type: string
+          description: The value of the option
+    MultiValueOption:
+      type: object
+      properties:
+        Name:
+          type: string
+          description: The name of the option
+        Values:
+          type: array
+          items:
+            type: string
+    ProtocolSettings:
+      type: object
+      properties:
+        SingleValueOptions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SingleValueOption"
+        MultiValueOptions:
+          type: array
+          items:
+            $ref: "#/components/schemas/MultiValueOption"
+        ActiveAddress:
+          type: string
+          description: The active address
+        AddressCollection:
+          type: array
+          items:
+            type: string
+          description: The list of addresses
+        BindingInterface:
+          type: string
+          description: The binding interface
+        DisplayName:
+          type: string
+          description: The display name
+        StreamType:
+          type: integer
+          description: The stream type
+        IsEnabled:
+          type: boolean
+          description: Whether the protocol is enabled
+        DriverMapping:
+          $ref: "#/components/schemas/ProtocolDriverMappings"
+    Protocol:
+      type: object
+      properties:
+        FactoryHandle:
+          $ref: "#/components/schemas/Handle"
+        HolderOperationState:
+          type: integer
+          description: The holder operation state
+        ProtocolHandle:
+          $ref: "#/components/schemas/Handle"
+        ProtocolOperationState:
+          type: integer
+          description: The protocol operation state
+        Settings:
+          $ref: "#/components/schemas/ProtocolSettings"
+
+    DiscardedAssembly:
+      type: object
+      properties:
+        Handle:
+          $ref: "#/components/schemas/Handle"
+        TODO:
+          type: string
+
+    ServerNodeOptions:
+      type: object
+      properties:
+        Handle:
+          $ref: "#/components/schemas/Handle"
+        Uri:
+          type: string
+          description: The URI of the server node
+        Location:
+          type: string
+          description: The location of the server node
+        Comment:
+          type: string
+          description: The comment of the server node
+        ForceSingleServer:
+          type: boolean
+          description: Whether to force a single server
+        JoinedServers:
+          type: array
+          items:
+            type: string
+          description: The list of joined servers
+        ForcePrimaryServer:
+          type: boolean
+          description: Whether to force the primary server
+        Binding:
+          type: string
+          description: The binding of the server node
+        CanForcePrimaryServer:
+          type: boolean
+          description: Whether the primary server can be forced
+
+    ServerNodeCaps:
+      type: object
+      properties:
+        MaxAllowedDevices:
+          type: integer
+          description: The maximum allowed devices
+          example: 3456
+        MaxAllowedDeviceControllers:
+          type: integer
+          description: The maximum allowed device controllers
+          example: 3456
+
+    ServerNodeLicense:
+      type: object
+      properties:
+        Purpose:
+          type: integer
+          description: The purpose of the license
+          example: 0
+        Seed:
+          type: string
+          description: The seed of the license
+          example: "5D-8D-DB-D4-19-5Q-G1-U1-5Q-T9-41"
+        Key:
+          type: string
+          description: The key of the license
+          example: "1P-26-D7-MC-T5-MC-TD-MQ-98-TU-LS-Q8-08-B6-88-MT-LV-56-QQ-8B"
+        IsLicensed:
+          type: boolean
+          description: Whether the server node is licensed
+          example: true
+        Caps:
+          $ref: "#/components/schemas/ServerNodeCaps"
+
+    ServerNodeServerNode:
+      type: object
+      properties:
+        Options:
+          $ref: "#/components/schemas/ServerNodeOptions"
+        MachineName:
+          type: string
+          description: The machine name of the server node
+        Version:
+          type: string
+          description: The version of the server node
+        StartupTime:
+          type: string
+          description: The startup time of the server node
+        Addresses:
+          type: array
+          items:
+            type: string
+          description: The list of addresses of the server node
+        IsLocalServer:
+          type: boolean
+          description: Whether the server node is the local server
+        OperationState:
+          type: integer
+          description: The operation state of the server node
+        License:
+          $ref: "#/components/schemas/ServerNodeLicense"
+    ServerNode:
+      type: object
+      properties:
+        Handle:
+          $ref: "#/components/schemas/Handle"
+        ServerNode:
+          $ref: "#/components/schemas/ServerNodeServerNode"
+
+    LogWriter:
+      type: object
+      properties:
+        Handle:
+          $ref: "#/components/schemas/Handle"
+        TODO:
+          type: string
+          description: The log writer
+
+    Plugin:
+      type: object
+      properties:
+        Handle:
+          $ref: "#/components/schemas/Handle"
+        TODO:
+          type: string
+          description: The plugin
+
+    ResourceData:
+      type: object
+      properties:
+        ProtocolFactories:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProtocolFactory"
+        DiscardedAssemblies:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiscardedAssembly"
+        LogWriters:
+          type: array
+          items:
+            $ref: "#/components/schemas/LogWriter"
+        ServerNodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServerNode"
+        Protocols:
+          type: array
+          items:
+            $ref: "#/components/schemas/Protocol"
+        Plugins:
+          type: array
+          items:
+            $ref: "#/components/schemas/Plugin"
+
+security:
+  - basicAuth: []
+
+paths:
+  /connect:
+    post:
+      summary: Creates a new session.
+      description: |
+        "The reply will provide basic information about the vsmGadgetServer instance.
+        Also the websocket endpoint can be obtained with this call to get incremental updates."
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  SessionHost:
+                    $ref: "#/components/schemas/SessionHost"
+                  OperationResult:
+                    $ref: "#/components/schemas/OperationResult"
+
+  /resourceHandles:
+    post:
+      summary: Returns an array of all known resources.
+      description: The reply will provide an array of all known resources.
+      requestBody:
+        description: The request body
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Types:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Type"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  Resources:
+                    $ref: "#/components/schemas/Resources"
+                  OperationResult:
+                    $ref: "#/components/schemas/OperationResult"
+
+  /resourceData:
+    post:
+      summary: Returns the data for the requested resources.
+      description: |
+        "The reply will provide the data for the requested resources.
+        *Heads up*: The reponse is allways the full ResourceData object,
+        even if only one specific resource is requested."
+      requestBody:
+        description: The request body
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Handles:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Handle"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ResourceData:
+                    $ref: "#/components/schemas/ResourceData"
+                  OperationResult:
+                    $ref: "#/components/schemas/OperationResult"
+
+    put:
+      summary: Updates an existing resource.
+      description: "The reply will provide the updated resource."
+      requestBody:
+        description: |
+          "The corresponding updated payload from the dex/resourceData.
+          Heads up: Only editable fields and the identifier (handle) must be provided."
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Data:
+                  type: object
+                  properties:
+                    ServerNodes:
+                      type: array
+                      items:
+                        $ref: "#/components/schemas/ServerNode"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  OperationResult:
+                    $ref: "#/components/schemas/OperationResult"
+  /resource:
+    post:
+      summary: Used to create a new protocol. All other resources can not be created.
+      description: "The reply will provide the created resource."
+      requestBody:
+        description: |
+          "Only the factory handle is required. Optionally the Displayname,
+          StreamType and AddressCollection fields can be supplied via the Settings object."
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Data:
+                  type: object
+                  properties:
+                    Protocols:
+                      type: array
+                      items:
+                        $ref: "#/components/schemas/Protocol"
+                IsUserAction:
+                  type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  Data:
+                    type: object
+                    properties:
+                      Protocols:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Protocol"
+                  OperationResult:
+                    $ref: "#/components/schemas/OperationResult"
+
+    delete:
+      summary: Deletes an existing resource.
+      description: "Deletes the resource which is referenced in the URL parameters: handle and type"
+      parameters:
+        - name: handle
+          in: query
+          description: The handle of the resource
+          required: true
+          schema:
+            $ref: "#/components/schemas/Handle"
+        - name: type
+          in: query
+          description: The type of the resource
+          required: true
+          schema:
+            $ref: "#/components/schemas/Type"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  Handle:
+                    $ref: "#/components/schemas/Handle"
+                  Type:
+                    $ref: "#/components/schemas/Type"
+                  OperationResult:
+                    $ref: "#/components/schemas/OperationResult"
+
+  /license:
+    get:
+      summary: "Gets the license information"
+      description: "The reply will provide the license information."
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  Handle:
+                    $ref: "#/components/schemas/Handle"
+                  License:
+                    $ref: "#/components/schemas/ServerNodeLicense"
+                  OperationResult:
+                    $ref: "#/components/schemas/OperationResult"
+
+  /join:
+    get:
+      summary: "Joins the server node to the server"
+      description: |
+        "Forces the localserver to send a join request to the provided ip or hostname.
+        In case the remote server is not shown in the known hosts
+        tab(udp broadcast - discover protocol is not forwarded between networks),
+        this call can be used to send out a join request to a specific server."
+      parameters:
+        - name: handle
+          in: query
+          description: The handle of the server node
+          required: true
+          schema:
+            $ref: "#/components/schemas/Handle"
+        - name: ip_or_hostname
+          in: query
+          description: The ip or hostname of the server
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  Handle:
+                    $ref: "#/components/schemas/Handle"
+                  OperationResult:
+                    $ref: "#/components/schemas/OperationResult"
+
+  /article:
+    get:
+      summary: "Gets the article"
+      description: |
+        "Gets the documentation of the corresponding resource.
+        To get the changelog set the handle to "changelog"
+      parameters:
+        - name: handle
+          in: query
+          description: The handle of the article or 'changelog'
+          required: true
+          schema:
+            $ref: "#/components/schemas/Handle"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  HelpFileMd:
+                    type: string
+                    example: |
+                      "Lorem ipsum dolor sit amet, consetetur sadipscing elitr,
+                      sed diam nonumy eirmod tempor invidunt ut labore et dolore
+                      magna aliquyam erat, sed diam voluptua. At vero eos et accusam
+                       et justo duo dolores et ea rebum. Stet clita kasd gubergren,
+                       no sea takimata sanctus est Lorem ipsum dolor sit amet.
+                       Lorem ipsum dolor sit amet, consetetur sadipscing elitr,
+                       sed diam nonumy eirmod tempor invidunt ut labore et dolore
+                       magna aliquyam erat, sed diam voluptua. At vero eos et accusam
+                       et justo duo dolores et ea rebum. Stet clita kasd gubergren,
+                       no sea takimata sanctus est Lorem ipsum dolor sit amet."
+                  OperationResult:
+                    $ref: "#/components/schemas/OperationResult"

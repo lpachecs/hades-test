@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tests.test_uhdcore &#8212; Lawo Device Factory  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=12dfc556" />
+    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for tests.test_uhdcore</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datamodel.endpoints</span><span class="w"> </span><span class="kn">import</span> <span class="n">endpoints_pb2</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">ldf.production</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_home_native</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tests</span><span class="w"> </span><span class="kn">import</span> <span class="n">log</span>
+
+<span class="n">HOME_SERVERS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;10.1.215.71&quot;</span><span class="p">,</span> <span class="s2">&quot;10.1.215.72&quot;</span><span class="p">,</span> <span class="s2">&quot;10.1.215.73&quot;</span><span class="p">]</span>
+<span class="n">TEST_DEVICE_GUID</span> <span class="o">=</span> <span class="s2">&quot;860a8dae-fd0c-3c62-814c-e88cd42266d4&quot;</span>
+<span class="n">REF_DEVICE_GUID</span> <span class="o">=</span> <span class="s2">&quot;9147e871-a12c-3ad5-ac20-b225817070e4&quot;</span>
+
+<span class="n">pytestmark</span> <span class="o">=</span> <span class="n">pytest</span><span class="o">.</span><span class="n">mark</span><span class="o">.</span><span class="n">dependency</span>
+
+
+<div class="viewcode-block" id="setup_split_group">
+<a class="viewcode-back" href="../../tests.html#tests.test_uhdcore.setup_split_group">[docs]</a>
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span><span class="p">(</span><span class="n">autouse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">setup_split_group</span><span class="p">(</span><span class="n">target_device</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Fixture will ensure that tests are started with standalone uhd core device&quot;&quot;&quot;</span>
+
+    <span class="n">group</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">get_redundancy_info</span><span class="p">(</span><span class="n">target_device</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">group</span><span class="o">.</span><span class="n">LeaderID</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">target_device</span><span class="o">.</span><span class="n">label</span><span class="si">}</span><span class="s2"> is currently part of a group, splitting group for tests&quot;</span><span class="p">)</span>
+        <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">split_redundancy_group</span><span class="p">(</span><span class="n">target_device</span><span class="p">,</span> <span class="n">group</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="target_device">
+<a class="viewcode-back" href="../../tests.html#tests.test_uhdcore.target_device">[docs]</a>
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span><span class="p">(</span><span class="n">scope</span><span class="o">=</span><span class="s1">&#39;module&#39;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">target_device</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Produce UHD Core DUT objects using the configured UHD Core test device&quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+        <span class="n">create_home_native</span><span class="p">(</span>
+            <span class="n">lawo_type</span><span class="o">=</span><span class="s2">&quot;A__UHD Core&quot;</span><span class="p">,</span>
+            <span class="n">guid</span><span class="o">=</span><span class="n">TEST_DEVICE_GUID</span><span class="p">,</span>
+            <span class="n">client_addrs</span><span class="o">=</span><span class="n">HOME_SERVERS</span>
+        <span class="p">)</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="reference_device">
+<a class="viewcode-back" href="../../tests.html#tests.test_uhdcore.reference_device">[docs]</a>
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span><span class="p">(</span><span class="n">scope</span><span class="o">=</span><span class="s1">&#39;module&#39;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">reference_device</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Produce UHD Core reference object using the configured UHD Core ref device&quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+        <span class="n">create_home_native</span><span class="p">(</span>
+            <span class="n">lawo_type</span><span class="o">=</span><span class="s2">&quot;A__UHD Core&quot;</span><span class="p">,</span>
+            <span class="n">guid</span><span class="o">=</span><span class="n">REF_DEVICE_GUID</span><span class="p">,</span>
+            <span class="n">client_addrs</span><span class="o">=</span><span class="n">HOME_SERVERS</span>
+        <span class="p">)</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="get_redundancy_info">
+<a class="viewcode-back" href="../../tests.html#tests.test_uhdcore.get_redundancy_info">[docs]</a>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_redundancy_info</span><span class="p">(</span><span class="n">device</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Coroutine to connect to a device and obtain the redundancy group info&quot;&quot;&quot;</span>
+
+    <span class="k">async</span> <span class="k">with</span> <span class="n">device</span><span class="o">.</span><span class="n">client</span><span class="p">:</span>
+        <span class="k">return</span> <span class="k">await</span> <span class="n">device</span><span class="o">.</span><span class="n">get_redundancy_group</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="split_redundancy_group">
+<a class="viewcode-back" href="../../tests.html#tests.test_uhdcore.split_redundancy_group">[docs]</a>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">split_redundancy_group</span><span class="p">(</span><span class="n">device</span><span class="p">,</span> <span class="n">group_info</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Coroutine will connect to the device and send a split group request&quot;&quot;&quot;</span>
+
+    <span class="k">async</span> <span class="k">with</span> <span class="n">device</span><span class="o">.</span><span class="n">client</span><span class="p">:</span>
+        <span class="k">await</span> <span class="n">device</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">group_info</span><span class="o">.</span><span class="n">ID</span><span class="p">,</span> <span class="n">device</span><span class="o">.</span><span class="n">id</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="test_uhdcore_endpoint">
+<a class="viewcode-back" href="../../tests.html#tests.test_uhdcore.test_uhdcore_endpoint">[docs]</a>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_uhdcore_endpoint</span><span class="p">(</span><span class="n">target_device</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">target_device</span><span class="o">.</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">endpoints_pb2</span><span class="o">.</span><span class="n">Endpoint</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="test_uhdcore_grouped">
+<a class="viewcode-back" href="../../tests.html#tests.test_uhdcore.test_uhdcore_grouped">[docs]</a>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">test_uhdcore_grouped</span><span class="p">(</span><span class="n">target_device</span><span class="p">):</span>
+    <span class="k">async</span> <span class="k">with</span> <span class="n">target_device</span><span class="o">.</span><span class="n">client</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="k">await</span> <span class="n">target_device</span><span class="o">.</span><span class="n">get_redundancy_group</span><span class="p">())</span>
+        <span class="k">assert</span> <span class="k">await</span> <span class="n">target_device</span><span class="o">.</span><span class="n">get_redundancy_group</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="test_get_mixer_config">
+<a class="viewcode-back" href="../../tests.html#tests.test_uhdcore.test_get_mixer_config">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_get_mixer_config</span><span class="p">(</span><span class="n">target_device</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">mixer</span> <span class="ow">in</span> <span class="n">target_device</span><span class="o">.</span><span class="n">mixers</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">mixer</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="test_uhdcore_mixer_objects">
+<a class="viewcode-back" href="../../tests.html#tests.test_uhdcore.test_uhdcore_mixer_objects">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_uhdcore_mixer_objects</span><span class="p">(</span><span class="n">target_device</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">mixer</span> <span class="ow">in</span> <span class="n">target_device</span><span class="o">.</span><span class="n">mixers</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">target_device</span><span class="o">.</span><span class="n">mixers</span><span class="p">,</span> <span class="n">mixer</span><span class="o">.</span><span class="n">Name</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="test_access_virtual_mixer">
+<a class="viewcode-back" href="../../tests.html#tests.test_uhdcore.test_access_virtual_mixer">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_access_virtual_mixer</span><span class="p">(</span><span class="n">target_device</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">sord</span> <span class="ow">in</span> <span class="n">target_device</span><span class="o">.</span><span class="n">mixers</span><span class="o">.</span><span class="n">one</span><span class="o">.</span><span class="n">sords</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">sord</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="test_mixer_count">
+<a class="viewcode-back" href="../../tests.html#tests.test_uhdcore.test_mixer_count">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_mixer_count</span><span class="p">(</span><span class="n">target_device</span><span class="p">):</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">target_device</span><span class="o">.</span><span class="n">mixers</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="test_mixer_repr">
+<a class="viewcode-back" href="../../tests.html#tests.test_uhdcore.test_mixer_repr">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_mixer_repr</span><span class="p">(</span><span class="n">target_device</span><span class="p">):</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">target_device</span><span class="o">.</span><span class="n">mixers</span><span class="p">)</span></div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Lawo Device Factory</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">lawo-device-factory</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Thomas Sutton.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.4.7</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

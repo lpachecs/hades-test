@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ldf.models.switch &#8212; Lawo Device Factory  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=12dfc556" />
+    <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for ldf.models.switch</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">datamodel.sw</span><span class="w"> </span><span class="kn">import</span> <span class="n">sw_home</span><span class="p">,</span> <span class="n">sw_pb2</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">ldf.models.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">LawoHomeNativeDevice</span>
+
+
+<div class="viewcode-block" id="LawoHomeNetworkSwitch">
+<a class="viewcode-back" href="../../../ldf.models.html#ldf.models.switch.LawoHomeNetworkSwitch">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">LawoHomeNetworkSwitch</span><span class="p">(</span><span class="n">LawoHomeNativeDevice</span><span class="p">):</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nats_servers</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">nats_port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4222</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">nats_servers</span><span class="p">,</span> <span class="n">nats_port</span><span class="p">)</span>
+
+<div class="viewcode-block" id="LawoHomeNetworkSwitch.get_traffic">
+<a class="viewcode-back" href="../../../ldf.models.html#ldf.models.switch.LawoHomeNetworkSwitch.get_traffic">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_traffic</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sources</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">sw_pb2</span><span class="o">.</span><span class="n">Traffic</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the traffic for the switch.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list[sw_pb2.Traffic]: The traffic for the switch source.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Getting traffic for switch </span><span class="si">{</span><span class="n">sources</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">traffic_source</span> <span class="o">=</span> <span class="n">sw_pb2</span><span class="o">.</span><span class="n">TrafficSource</span><span class="p">()</span>
+        <span class="n">traffic_source</span><span class="o">.</span><span class="n">InterfaceIDs</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">sources</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">traffic_source</span><span class="p">)</span>
+
+        <span class="n">traffic</span><span class="p">,</span> <span class="n">err</span> <span class="o">=</span> <span class="k">await</span> <span class="n">sw_home</span><span class="o">.</span><span class="n">sw_get_traffic</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="p">[</span><span class="n">traffic_source</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to get traffic for switch </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">traffic</span></div>
+
+
+<div class="viewcode-block" id="LawoHomeNetworkSwitch.get_acls">
+<a class="viewcode-back" href="../../../ldf.models.html#ldf.models.switch.LawoHomeNetworkSwitch.get_acls">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_acls</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">sw_pb2</span><span class="o">.</span><span class="n">AccessControlList</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the access control lists for the switch.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list[sw_pb2.AccessControlList]: The access control lists for the switch.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">acls</span><span class="p">,</span> <span class="n">err</span> <span class="o">=</span> <span class="k">await</span> <span class="n">sw_home</span><span class="o">.</span><span class="n">sw_get_acl_s</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to get ACLs for switch </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">acls</span></div>
+
+
+<div class="viewcode-block" id="LawoHomeNetworkSwitch.set_acls">
+<a class="viewcode-back" href="../../../ldf.models.html#ldf.models.switch.LawoHomeNetworkSwitch.set_acls">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">set_acls</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">acls</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">sw_pb2</span><span class="o">.</span><span class="n">AccessControlList</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set the access control lists for the switch.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            acls (list[sw_pb2.AccessControlList]): The access control lists to set for the switch.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">err</span> <span class="o">=</span> <span class="k">await</span> <span class="n">sw_home</span><span class="o">.</span><span class="n">sw_set_acl_s</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">acls</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to set ACLs for switch </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">err</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="LawoHomeNetworkSwitch.remove_acls">
+<a class="viewcode-back" href="../../../ldf.models.html#ldf.models.switch.LawoHomeNetworkSwitch.remove_acls">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">remove_acls</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">acls</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">sw_pb2</span><span class="o">.</span><span class="n">AccessControlList</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove the access control lists for the switch.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            acls (list[sw_pb2.AccessControlList]): The access control lists to remove for the switch.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">err</span> <span class="o">=</span> <span class="k">await</span> <span class="n">sw_home</span><span class="o">.</span><span class="n">sw_delete_acl_s</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">acls</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to remove ACLs for switch </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">err</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="LawoHomeNetworkSwitch.get_stitches">
+<a class="viewcode-back" href="../../../ldf.models.html#ldf.models.switch.LawoHomeNetworkSwitch.get_stitches">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_stitches</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">sw_pb2</span><span class="o">.</span><span class="n">Stitch</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the stitches for the switch.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list[sw_pb2.Stitch]: The stitches for the switch.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">stitches</span><span class="p">,</span> <span class="n">err</span> <span class="o">=</span> <span class="k">await</span> <span class="n">sw_home</span><span class="o">.</span><span class="n">sw_get_stitches</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to get stitches for switch </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">stitches</span></div>
+
+
+<div class="viewcode-block" id="LawoHomeNetworkSwitch.set_stitches">
+<a class="viewcode-back" href="../../../ldf.models.html#ldf.models.switch.LawoHomeNetworkSwitch.set_stitches">[docs]</a>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">set_stitches</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stitches</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">sw_pb2</span><span class="o">.</span><span class="n">Stitch</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set the stitches for the switch.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            stitches (list[sw_pb2.Stitch]): The stitches to set for the switch.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">err</span> <span class="o">=</span> <span class="k">await</span> <span class="n">sw_home</span><span class="o">.</span><span class="n">sw_set_stitches</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">stitches</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to set stitches for switch </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">err</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">Lawo Device Factory</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">lawo-device-factory</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Thomas Sutton.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.4.7</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ldf.common.connections &#8212; Lawo Device Factory  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=12dfc556" />
+    <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for ldf.common.connections</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">datamodel.sords.sords_pb2</span><span class="w"> </span><span class="kn">import</span> <span class="n">Essence</span><span class="p">,</span> <span class="n">Gate</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">ldf.attributes.sords</span><span class="w"> </span><span class="kn">import</span> <span class="n">LawoHomeNativeFlow</span><span class="p">,</span> <span class="n">LawoHomeNativeSord</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ldf.models.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">LawoHomeNativeDevice</span>
+
+
+<div class="viewcode-block" id="connect_sords">
+<a class="viewcode-back" href="../../../ldf.common.html#ldf.common.connections.connect_sords">[docs]</a>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">connect_sords</span><span class="p">(</span>
+        <span class="n">src_map</span><span class="p">:</span>
+        <span class="nb">dict</span><span class="p">[</span><span class="n">LawoHomeNativeDevice</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">LawoHomeNativeSord</span><span class="p">]],</span>
+        <span class="n">dst_map</span><span class="p">:</span>
+        <span class="nb">dict</span><span class="p">[</span><span class="n">LawoHomeNativeDevice</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">LawoHomeNativeSord</span><span class="p">]],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    Connects device Sords</span>
+
+<span class="sd">    The number of TX and RX sords must be equal, however,</span>
+<span class="sd">    if only a single TX sord is given it will be patched to all RX</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        src_map (dict[LawoHomeNativeDevice: list[LawoHomeNativeSord]]):</span>
+<span class="sd">            A dict where the key is the device and the value is the TX sords</span>
+<span class="sd">        dst_map (dict[LawoHomeNativeDevice: list[LawoHomeNativeSord]]):</span>
+<span class="sd">            A dict where the key is the device and the value is the RX sords</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list[tuple[str, str]]: A list of connections represented in strings</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        connect_sords(</span>
+<span class="sd">            {</span>
+<span class="sd">                device_1: [tx_1, tx_2, tx_1],</span>
+<span class="sd">                device_2: [tx_3, tx_4]</span>
+<span class="sd">            },</span>
+<span class="sd">            {</span>
+<span class="sd">                device_3: [rx_1, rx_2],</span>
+<span class="sd">                device_4: [rx_3, rx_4, rx_5]</span>
+<span class="sd">            }</span>
+<span class="sd">        )</span>
+
+<span class="sd">        The following conections would be made:</span>
+
+<span class="sd">            - device_1 : tx_1 &gt; device_3 : rx_1</span>
+<span class="sd">            - device_1 : tx_2 &gt; device_3 : rx_2</span>
+<span class="sd">            - device_1 : tx_1 &gt; device_4 : rx_3</span>
+<span class="sd">            - device_2 : tx_3 &gt; device_4 : rx_4</span>
+<span class="sd">            - device_2 : tx_4 &gt; device_4 : rx_5</span>
+
+<span class="sd">        You could think of all lists in the src_map and dst_map</span>
+<span class="sd">        as two seperate lists which get mapped 1:1:</span>
+
+<span class="sd">            [tx_1, tx_2, tx_1, tx_3, tx_4]</span>
+<span class="sd">               |     |     |     |     |</span>
+<span class="sd">               v     v     V     V     V</span>
+<span class="sd">            [rx_1, rx_2, rx_3, rx_4, rx_5]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Ensure that the number of TX/RX sords are equal</span>
+    <span class="n">total_src</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sords</span><span class="p">)</span> <span class="k">for</span> <span class="n">sords</span> <span class="ow">in</span> <span class="n">src_map</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="n">total_dst</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sords</span><span class="p">)</span> <span class="k">for</span> <span class="n">sords</span> <span class="ow">in</span> <span class="n">dst_map</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">total_src</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">src_map</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">src_map</span><span class="o">.</span><span class="n">keys</span><span class="p">())):</span>
+                <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">src_map</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span> <span class="o">*</span> <span class="n">total_dst</span><span class="p">}</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="n">total_src</span> <span class="o">==</span> <span class="n">total_dst</span><span class="p">,</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Number of TX/RX sords are not equal (</span><span class="si">{</span><span class="n">total_src</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">total_dst</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+    <span class="c1"># Make connections</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">flattened_dst_map</span> <span class="o">=</span> <span class="p">[(</span><span class="n">d</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="n">sords</span> <span class="ow">in</span> <span class="n">dst_map</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sords</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">src_device</span><span class="p">,</span> <span class="n">src_sords</span> <span class="ow">in</span> <span class="n">src_map</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">sords_to_connect</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">src_sord</span> <span class="ow">in</span> <span class="n">src_sords</span><span class="p">:</span>
+            <span class="n">dst_device</span><span class="p">,</span> <span class="n">dst_sord</span> <span class="o">=</span> <span class="n">flattened_dst_map</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+            <span class="n">sords_to_connect</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">src_sord</span><span class="p">,</span> <span class="n">dst_device</span><span class="p">,</span> <span class="n">dst_sord</span><span class="p">))</span>
+            <span class="n">idx</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">gates</span> <span class="o">=</span> <span class="n">get_gates_from_data</span><span class="p">(</span><span class="n">src_device</span><span class="p">,</span> <span class="n">sords_to_connect</span><span class="p">)</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="n">src_device</span><span class="p">:</span>
+            <span class="k">return</span> <span class="k">await</span> <span class="n">src_device</span><span class="o">.</span><span class="n">addresses</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">gates</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="get_gates_from_data">
+<a class="viewcode-back" href="../../../ldf.common.html#ldf.common.connections.get_gates_from_data">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_gates_from_data</span><span class="p">(</span><span class="n">src_device</span><span class="p">:</span> <span class="n">LawoHomeNativeDevice</span><span class="p">,</span>
+                        <span class="n">sords_to_connect</span><span class="p">:</span> <span class="nb">list</span>
+                        <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Gate</span><span class="p">,</span> <span class="n">Gate</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot; Will connect all valid flow address gates in a Sord</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        src_device (LawoHomeNativeDevice): The transmitting device</span>
+<span class="sd">        sords_to_connect (list): An organised list of destinarion nfo</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list[tuple[Gate, Gate]]: The Gate connections to make</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">gates</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">src_sord</span><span class="p">,</span> <span class="n">dst_device</span><span class="p">,</span> <span class="n">dst_sord</span> <span class="ow">in</span> <span class="n">sords_to_connect</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">essence</span> <span class="ow">in</span> <span class="n">Essence</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">essence</span> <span class="ow">is</span> <span class="n">Essence</span><span class="o">.</span><span class="n">NONE</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="c1"># Make possible flow connections by essence</span>
+            <span class="n">src_flows</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">flow</span> <span class="k">for</span> <span class="n">flow</span> <span class="ow">in</span> <span class="n">src_sord</span><span class="o">.</span><span class="n">flows</span> <span class="k">if</span> <span class="n">flow</span><span class="o">.</span><span class="n">essence</span> <span class="o">==</span> <span class="n">essence</span><span class="p">]</span>
+            <span class="n">dst_flows</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">flow</span> <span class="k">for</span> <span class="n">flow</span> <span class="ow">in</span> <span class="n">dst_sord</span><span class="o">.</span><span class="n">flows</span> <span class="k">if</span> <span class="n">flow</span><span class="o">.</span><span class="n">essence</span> <span class="o">==</span> <span class="n">essence</span><span class="p">]</span>
+            <span class="c1"># If either cannot send/recv then continue</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">src_flows</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">dst_flows</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">for</span> <span class="n">src_flow</span><span class="p">,</span> <span class="n">dst_flow</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">src_flows</span><span class="p">,</span> <span class="n">dst_flows</span><span class="p">):</span>
+                <span class="n">gates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="p">(</span>
+                        <span class="n">src_device</span><span class="o">.</span><span class="n">addresses</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">src_device</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">src_sord</span><span class="o">.</span><span class="n">ID</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">src_flow</span><span class="o">.</span><span class="n">ID</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">Gate</span><span class="p">,</span>
+                        <span class="n">dst_device</span><span class="o">.</span><span class="n">addresses</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dst_device</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">dst_sord</span><span class="o">.</span><span class="n">ID</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">dst_flow</span><span class="o">.</span><span class="n">ID</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">Gate</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+    <span class="k">return</span> <span class="n">gates</span></div>
+
+
+
+<div class="viewcode-block" id="disconnect_destinations">
+<a class="viewcode-back" href="../../../ldf.common.html#ldf.common.connections.disconnect_destinations">[docs]</a>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">disconnect_destinations</span><span class="p">(</span>
+    <span class="n">disconnections</span><span class="p">:</span>
+        <span class="nb">dict</span><span class="p">[</span>
+            <span class="n">LawoHomeNativeDevice</span><span class="p">:</span>
+            <span class="nb">list</span><span class="p">[</span><span class="n">LawoHomeNativeSord</span> <span class="ow">or</span> <span class="n">LawoHomeNativeFlow</span><span class="p">]</span>
+        <span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot; Will disconnect RX Sords/Flows of a device</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        device (dict[LawoHomeNativeDevice, list[LawoHomeNativeSord]]):</span>
+<span class="sd">            A dictionary where the key is the device and</span>
+<span class="sd">            the values are a list of Sords/Flows to disconnect</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        bool: True if the disconnect was sucessful</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Disconnect gates</span>
+    <span class="n">gates</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">device</span><span class="p">,</span> <span class="n">destinations</span> <span class="ow">in</span> <span class="n">disconnections</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">dst</span> <span class="ow">in</span> <span class="n">destinations</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">dst</span><span class="p">)</span> <span class="ow">is</span> <span class="n">LawoHomeNativeSord</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">flow</span> <span class="ow">in</span> <span class="n">dst</span><span class="o">.</span><span class="n">flows</span><span class="p">:</span>
+                    <span class="n">gates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                        <span class="n">device</span><span class="o">.</span><span class="n">addresses</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">device</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">dst</span><span class="o">.</span><span class="n">ID</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">flow</span><span class="o">.</span><span class="n">ID</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">Gate</span>
+                    <span class="p">)</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">dst</span><span class="p">)</span> <span class="ow">is</span> <span class="n">LawoHomeNativeFlow</span><span class="p">:</span>
+                <span class="n">gates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="n">device</span><span class="o">.</span><span class="n">addresses</span><span class="o">.</span><span class="n">state</span><span class="p">[</span>
+                        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">device</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">dst</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">ID</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">dst</span><span class="o">.</span><span class="n">ID</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">Gate</span><span class="p">)</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="n">device</span><span class="p">:</span>
+            <span class="k">return</span> <span class="k">await</span> <span class="n">device</span><span class="o">.</span><span class="n">addresses</span><span class="o">.</span><span class="n">disconnect</span><span class="p">(</span><span class="n">gates</span><span class="p">)</span></div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">Lawo Device Factory</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../ldf.attributes.html">ldf.attributes package</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Thomas Sutton.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.4.7</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

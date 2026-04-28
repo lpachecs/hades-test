@@ -1,0 +1,90 @@
+name: Test and Publish a new Package Version
+
+on:
+  push:
+    tags:
+      - '**'
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test:
+    name: Test Lawo Device Factory
+    uses: ./.gitea/workflows/test.yml
+    secrets: inherit
+
+  publish:
+    name: Publish LDF Package
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install Poetry
+        uses: Gr1N/setup-poetry@v9
+        with:
+          poetry-version: "2.0.1"
+
+      # - uses: actions/cache@v4
+      #   with:
+      #     path: ~/.cache/pypoetry/virtualenvs
+      #     key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
+
+      - name: Install dependencies
+        run: |-
+          poetry config http-basic.gitea-pypi x-access-token ${{ secrets.asset_rw_access }}
+          poetry lock
+          poetry install
+
+      - name: Build project
+        run: poetry build
+
+      - name: Publish to PyPI
+        run: |-
+          poetry config http-basic.gitea-pub x-access-token ${{ secrets.asset_rw_access }}
+          poetry publish --repository gitea-pub
+      
+      - name: Trigger Jenkins Job
+        run: |-
+          printf 'Triggering Jenkins job...\n'
+
+          JENKINS_URI=$(printf '%s%s/buildWithParameters?giteaCreds=%s&cause=AutoGiteaActionTrigger-%s-%s' \
+                    '${{ vars.JENKINS_CST_URL }}' \
+                    '${{ vars.JENKINS_JOB_PATH }}' \
+                    'GITEA_QAORG_ACTIONS_SECRETS_ASSET_CST_BUILDER' \
+                    '${{ gitea.repository }}' \
+                    '${{ gitea.run_id }}')
+
+          printf 'Jenkins URI: %s\n' "${JENKINS_URI}"
+          curl --location --request POST "${JENKINS_URI}" --header '${{ secrets.HTTP_BASIC_AUTH_CST_PIPELINES }}'
+  
+  container:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    needs: publish
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to Docker Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ccp-tea.lawo.de
+          username: Dienstkonto.Buildbot
+          password: ${{ secrets.asset_rw_access }}
+      
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: ccp-tea.lawo.de/quality-assurance/lawo-device-factory:latest
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.asset_rw_access }}

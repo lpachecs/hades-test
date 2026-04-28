@@ -1,0 +1,18 @@
+[flake8]
+
+exclude =
+    .venv,
+    .poetry,
+    __pycache__,
+    .git,
+    .tox,
+
+tee = True
+show-source = True
+max-line-length = 120
+
+ignore =
+    # continuation line under-indented for visual indent
+    E128,
+    # Line break occurred after a binary operator
+    W504,
